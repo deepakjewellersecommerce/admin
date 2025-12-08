@@ -11,7 +11,6 @@ import {
   Check,
   X,
   LucideIcon,
-  RefreshCcw,
 } from "lucide-react"; // Import icons
 import { useMemo } from "react";
 // import { Button } from "@/components/ui/button";
@@ -43,7 +42,8 @@ const DashboardHome = () => {
   const { mutate: updateAllPricing, isPending: isUpdatingPrices } = useBulkUpdatePricing();
   
   const lowStockItems = useMemo(() => {
-    return lowStockData?.data?.data?.products || [];
+    // Inventory controller returns a flattened `items` array for low-stock entries
+    return lowStockData?.data?.data?.items || [];
   }, [lowStockData]);
 
   // Extract metrics from API response

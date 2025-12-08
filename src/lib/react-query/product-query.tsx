@@ -367,12 +367,13 @@ export const useGetProductImages = (productId: string, colorId: string) => {
 export const useUpdateProductStock = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ productId, stockCount }: { productId: string, stockCount: number }) => 
-      productAPI.updateProductStock(productId, stockCount),
+    mutationFn: ({ inventoryId, stockCount }: { inventoryId: string, stockCount: number }) => 
+      productAPI.updateProductStock(inventoryId, stockCount),
     onSuccess: (_, variables) => {
       toast.success("Product stock updated successfully!");
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["product", variables.productId] });
+      // Invalidate product detail and low stock caches
+      queryClient.invalidateQueries({ queryKey: ["product"] });
       queryClient.invalidateQueries({ queryKey: ["lowStockProducts"] });
     },
     onError: (error: any) => {

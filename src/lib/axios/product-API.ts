@@ -68,27 +68,24 @@ export const productAPI = {
         return response;
       }
 
-      // First try /product endpoint for JSON payloads
+      // For admin UI, use admin endpoint first for JSON payloads
       try {
-        const response = await instance.post('/product', payload);
-        console.log("Product added successfully via /product:", response);
-        return response;
-      } catch (productError: any) {
-        console.log("Failed to add via /product:", productError.message);
-
-        // Only continue to admin endpoint if it was a 404
-        if (productError.response && productError.response.status !== 404) {
-          throw productError;
-        }
-
-        // Try admin endpoint
-        try {
-          const adminResponse = await instance.post('/admin/product/add', payload);
-          console.log("Product added successfully via admin endpoint:", adminResponse);
-          return adminResponse;
-        } catch (adminError: any) {
-          console.error("Admin endpoint failed:", adminError.message);
+        const adminResponse = await instance.post('/admin/product/add', payload);
+        console.log("Product added successfully via admin endpoint:", adminResponse);
+        return adminResponse;
+      } catch (adminError: any) {
+        console.log("Admin endpoint failed:", adminError.message);
+        // If admin endpoint fails with 404, fallback to public endpoint
+        if (adminError.response && adminError.response.status !== 404) {
           throw adminError;
+        }
+        try {
+          const response = await instance.post('/product', payload);
+          console.log("Product added successfully via /product:", response);
+          return response;
+        } catch (productError: any) {
+          console.error("Public product endpoint failed:", productError.message);
+          throw productError;
         }
       }
     } catch (error: any) {
@@ -123,10 +120,12 @@ export const productAPI = {
   },
   getWalletBalance: () => instance.get('/user/wallet'),
   getLowStockProducts: async (threshold = 5) => {
-    return instance.get('/product/low-stock', { params: { threshold } });
+    // Use the inventory admin endpoint for low-stock data (admin UI)
+    return instance.get('/admin/inventory/low-stock', { params: { threshold } });
   },
   updateProductPricing: async (productId: string) => {
-    return instance.post(`/product/${productId}/update-pricing`);
+    // Use admin product pricing update endpoint (PUT)
+    return instance.put(`/admin/product/${productId}/update-pricing`);
   },
   bulkUpdatePricing: async () => {
     // Removed bulk update pricing endpoint (not used for skin care products)
@@ -139,7 +138,8 @@ export const productAPI = {
    * @param stockCount New stock count
    * @returns Promise with updated product data
    */
-  updateProductStock: async (productId: string, stockCount: number) => {
-    return instance.put(`/product/${productId}/update-stock`, { stock: stockCount });
+  updateProductStock: async (inventoryId: string, stockCount: number) => {
+    // Inventory update endpoint expects an inventoryId
+    return instance.put(`/admin/inventory/${inventoryId}/stock`, { stock: stockCount });
   },
 };

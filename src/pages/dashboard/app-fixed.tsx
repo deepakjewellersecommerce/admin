@@ -43,7 +43,7 @@ const DashboardHome = () => {
   const { mutate: updateAllPricing, isPending: isUpdatingPrices } = useBulkUpdatePricing();
   
   const lowStockItems = useMemo(() => {
-    return lowStockData?.data?.data?.products || [];
+    return lowStockData?.data?.data?.items || [];
   }, [lowStockData]);
 
   // Extract metrics from API response
