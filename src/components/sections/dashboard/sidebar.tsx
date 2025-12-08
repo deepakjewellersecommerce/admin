@@ -14,6 +14,7 @@ import {
   Box,
   BoxIcon,
   GalleryVertical,
+  Gift,
   Grid,
   // Paintbrush2,
   PenBox,
@@ -103,6 +104,15 @@ const Navbar: Tab[] = [
     icon: Users,
     href: "/users",
     subMenu: [{ label: "Customer List", href: "/users/list" }],
+  },
+  {
+    label: "Loyalty",
+    icon: Gift,
+    href: "/loyalty",
+    subMenu: [
+      { label: "Loyalty Members", href: "/loyalty/users" },
+      { label: "Program Settings", href: "/loyalty/settings" },
+    ],
   },
   {
     label: "Blog",

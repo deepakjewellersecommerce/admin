@@ -271,7 +271,7 @@ const UpdateProductForm = () => {
             placeholder="Enter Care Handling"
             label="Care Handling"
           />
-          <FormTextArea
+          {/* <FormTextArea
             control={form.control}
             name="ingredients"
             placeholder="Enter Product Ingredients"
@@ -300,7 +300,7 @@ const UpdateProductForm = () => {
             name="amazonLink"
             placeholder="Enter Amazon Link (https://...)"
             label="Amazon Link"
-          />
+          /> */}
           <FormImageInput name="productImageUrl" label="Product Image URL" />
           {/* Size Chart removed as not required */}
           <Button type="submit" className="w-full" disabled={isPending}>

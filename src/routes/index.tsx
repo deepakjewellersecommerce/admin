@@ -24,6 +24,8 @@ import {
   EditColorForm,
   EditCouponForm,
   LoginPage,
+  LoyaltyProgramSettings,
+  LoyaltyUsersList,
   NoticationPage,
   OrderView,
   OrdersList,
@@ -251,6 +253,14 @@ export default function Router() {
         {
           path: "blogs/:id",
           element: <UpdateBlogForm />,
+        },
+        {
+          path: "loyalty/users",
+          element: <LoyaltyUsersList />,
+        },
+        {
+          path: "loyalty/settings",
+          element: <LoyaltyProgramSettings />,
         },
         {
           path: "colors/list",

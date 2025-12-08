@@ -189,13 +189,10 @@ export const useUpdateProduct = () => {
   return useMutation({
     mutationFn: productAPI.updateProduct,
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["products"],
-        predicate: (query) => {
-          return query.queryKey[1] === "products";
-        },
-      });
-     toast.success("Successfully Updated!");
+      // Invalidate all product-related queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product"] });
+      toast.success("Successfully Updated!");
     },
     onError: (error: any) => {
       toast.error(

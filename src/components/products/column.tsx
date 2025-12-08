@@ -118,56 +118,56 @@ export const ProductColumns: ColumnDef<Product>[] = [
     header: "GST",
     cell: ({ row }) => `${row.original.gst}%`,
   },
-  {
-    accessorKey: "ingredients",
-    header: "Ingredients",
-    cell: ({ row }) => {
-      const stripHtml = (html: string) => {
-        const tmp = document.createElement("DIV");
-        tmp.innerHTML = html;
-        return tmp.textContent || tmp.innerText || "";
-      };
-      const plainText = row.original.ingredients ? stripHtml(row.original.ingredients) : "";
-      return (
-        <div className="truncate w-48 text-sm">
-          {plainText || "-"}
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "benefits",
-    header: "Benefits",
-    cell: ({ row }) => {
-      const stripHtml = (html: string) => {
-        const tmp = document.createElement("DIV");
-        tmp.innerHTML = html;
-        return tmp.textContent || tmp.innerText || "";
-      };
-      const plainText = row.original.benefits ? stripHtml(row.original.benefits) : "";
-      return (
-        <div className="truncate w-48 text-sm">
-          {plainText || "-"}
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "shlok",
-    header: "Shlok",
-    cell: ({ row }) => {
-      const shlok = row.original.shlok;
-      if (shlok?.shlokText || shlok?.shlokMeaning) {
-        return (
-          <div className="text-sm">
-            <div className="truncate w-32">{shlok.shlokText ? "Text: ✓" : ""}</div>
-            <div className="truncate w-32">{shlok.shlokMeaning ? "Meaning: ✓" : ""}</div>
-          </div>
-        );
-      }
-      return <div className="text-sm text-gray-400">-</div>;
-    },
-  },
+  // {
+  //   accessorKey: "ingredients",
+  //   header: "Ingredients",
+  //   cell: ({ row }) => {
+  //     const stripHtml = (html: string) => {
+  //       const tmp = document.createElement("DIV");
+  //       tmp.innerHTML = html;
+  //       return tmp.textContent || tmp.innerText || "";
+  //     };
+  //     const plainText = row.original.ingredients ? stripHtml(row.original.ingredients) : "";
+  //     return (
+  //       <div className="truncate w-48 text-sm">
+  //         {plainText || "-"}
+  //       </div>
+  //     );
+  //   },
+  // },
+  // {
+  //   accessorKey: "benefits",
+  //   header: "Benefits",
+  //   cell: ({ row }) => {
+  //     const stripHtml = (html: string) => {
+  //       const tmp = document.createElement("DIV");
+  //       tmp.innerHTML = html;
+  //       return tmp.textContent || tmp.innerText || "";
+  //     };
+  //     const plainText = row.original.benefits ? stripHtml(row.original.benefits) : "";
+  //     return (
+  //       <div className="truncate w-48 text-sm">
+  //         {plainText || "-"}
+  //       </div>
+  //     );
+  //   },
+  // },
+  // {
+  //   accessorKey: "shlok",
+  //   header: "Shlok",
+  //   cell: ({ row }) => {
+  //     const shlok = row.original.shlok;
+  //     if (shlok?.shlokText || shlok?.shlokMeaning) {
+  //       return (
+  //         <div className="text-sm">
+  //           <div className="truncate w-32">{shlok.shlokText ? "Text: ✓" : ""}</div>
+  //           <div className="truncate w-32">{shlok.shlokMeaning ? "Meaning: ✓" : ""}</div>
+  //         </div>
+  //       );
+  //     }
+  //     return <div className="text-sm text-gray-400">-</div>;
+  //   },
+  // },
   {
     accessorKey: "actions",
     cell: ({ row }) => (

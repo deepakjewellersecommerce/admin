@@ -60,3 +60,7 @@ export const AddBannerForm = Loadable(lazy(() => import("@/components/banner/add
 export const UpdateBannerForm = Loadable(lazy(() => import("@/components/banner/update-banner-form")));
 export const NoticationPage = Loadable(lazy(() => import("@/components/notifications")));
 export const WebSettingsForm = Loadable(lazy(() => import("@/pages/dashboard/web-settings")));
+
+// Loyalty Management
+export const LoyaltyUsersList = Loadable(lazy(() => import("@/components/loyalty/loyalty-users-list")));
+export const LoyaltyProgramSettings = Loadable(lazy(() => import("@/components/loyalty/loyalty-program-settings")));

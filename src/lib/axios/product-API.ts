@@ -112,7 +112,7 @@ export const productAPI = {
   updateCategoryWithFormData: async (formData: FormData, categoryId: string) => {
     console.log("updateCategoryWithFormData called with categoryId:", categoryId);
     console.log("FormData contents:");
-    for (let [key, value] of formData.entries()) {
+    for (const [key, value] of formData.entries()) {
       if (value instanceof File) {
         console.log(`${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
       } else {

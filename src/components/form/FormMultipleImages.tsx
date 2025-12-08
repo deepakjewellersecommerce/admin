@@ -33,7 +33,7 @@ function FormImageUploader<TFieldValues extends FieldValues = FieldValues>({
     if (newFiles.length === 0) return;
 
     // Allow up to 3 files total
-    const existingFiles: File[] = (getValues('images') as File[]) || [];
+    const existingFiles: File[] = (getValues(name) as File[]) || [];
     const spaceLeft = Math.max(0, 3 - existingFiles.length);
     const filesToAdd = newFiles.slice(0, spaceLeft);
 
@@ -47,7 +47,7 @@ function FormImageUploader<TFieldValues extends FieldValues = FieldValues>({
     setPreviewUrls((prev) => [...prev, ...newPreviews]);
 
     // store file objects in form under key 'images'
-    setValue('images', [...existingFiles, ...filesToAdd], { shouldValidate: false, shouldDirty: true });
+    setValue(name, [...existingFiles, ...filesToAdd], { shouldValidate: false, shouldDirty: true });
   };
 
   const handleRemove = (index: number) => {
@@ -76,27 +76,42 @@ function FormImageUploader<TFieldValues extends FieldValues = FieldValues>({
     <div>
       <h2 className="text-lg font-semibold mb-2">Upload Images</h2>
       {/* Existing image URLs saved on product (from DB) */}
-      {fields.length > 0 && (
-        <div className="flex p-2 bg-gray-100 border border-dashed rounded-sm mb-4 gap-6 flex-wrap">
-          {fields.map((_previewUrl, index) => (
-            <div key={`existing-${index}`} className="mb-4 relative">
-              <img
-                src={getLinkFromJson(fields[index])}
-                alt={`Preview ${index + 1}`}
-                className={cn("w-28 h-28 rounded-sm object-contain bg-white")}
-              />
-              <Button
-                variant={"destructive"}
-                onClick={() => handleRemove(index)}
-                className=" w-7 h-7 absolute top-1 right-1"
-                size={"icon"}
-              >
-                <X size={18} />
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
+      {fields.length > 0 && (() => {
+        const savedFields = (fields || []).filter((f: any) => {
+          if (typeof f === 'string') return true;
+          if (!f || typeof f !== 'object') return false;
+          // detect File-like objects and exclude them
+          if (typeof f.name === 'string' && typeof f.size === 'number') return false;
+          // has url/secure_url => saved object
+          if (f.url || f.secure_url) return true;
+          // numeric key stored JSON (like Cloudinary-like split chars)
+          const keys = Object.keys(f || {});
+          if (keys.some(k => !isNaN(Number(k)))) return true;
+          return false;
+        });
+        if (savedFields.length === 0) return null;
+        return (
+          <div className="flex p-2 bg-gray-100 border border-dashed rounded-sm mb-4 gap-6 flex-wrap">
+            {savedFields.map((_previewUrl, index) => (
+              <div key={`existing-${index}`} className="mb-4 relative">
+                <img
+                  src={getLinkFromJson(savedFields[index])}
+                  alt={`Preview ${index + 1}`}
+                  className={cn("w-28 h-28 rounded-sm object-contain bg-white")}
+                />
+                <Button
+                  variant={"destructive"}
+                  onClick={() => handleRemove(index)}
+                  className=" w-7 h-7 absolute top-1 right-1"
+                  size={"icon"}
+                >
+                  <X size={18} />
+                </Button>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Local previews for newly selected files (not yet uploaded) */}
       {previewUrls.length > 0 && (
@@ -116,9 +131,9 @@ function FormImageUploader<TFieldValues extends FieldValues = FieldValues>({
                   updatedFiles.splice(idx, 1);
                   setSelectedFiles(updatedFiles);
 
-                  const existingFiles: File[] = (getValues('images') as File[]) || [];
+                  const existingFiles: File[] = (getValues(name) as File[]) || [];
                   existingFiles.splice(idx, 1);
-                  setValue('images', existingFiles, { shouldValidate: false, shouldDirty: true });
+                  setValue(name, existingFiles, { shouldValidate: false, shouldDirty: true });
                 }}
                 className=" w-7 h-7 absolute top-1 right-1"
                 size={"icon"}

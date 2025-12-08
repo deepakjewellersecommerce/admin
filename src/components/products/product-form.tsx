@@ -362,7 +362,7 @@ const ProductForm = () => {
             placeholder="Enter Care Handling"
             label="Care Handling"
           />
-          <FormTextArea
+          {/* <FormTextArea
             control={form.control}
             name="ingredients"
             placeholder="Enter Product Ingredients"
@@ -391,7 +391,7 @@ const ProductForm = () => {
             name="amazonLink"
             placeholder="Enter Amazon Link (https://...)"
             label="Amazon Link"
-          />
+          /> */}
           <FormImageInput name="productImageUrl" label="Product Image URL" />
           <Button 
             type="submit" 

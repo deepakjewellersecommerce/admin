@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { z } from "zod";
 import FormProvider from "../form/FormProvider";
 import { useForm } from "react-hook-form";
@@ -20,16 +21,27 @@ type Props = {
   onSubmit: (data: any) => void;
   defaultValues?: BannerType;
   isPending: boolean;
+  onChange?: (data: Partial<BannerType> & { images?: any[] }) => void;
 };
 
-const BannerForm = ({ onSubmit, defaultValues, isPending }: Props) => {
+const BannerForm = ({ onSubmit, defaultValues, isPending, onChange }: Props) => {
   const form = useForm<BannerType>({
     resolver: zodResolver(bannerSchema),
     defaultValues: defaultValues,
   });
 
+  // Notify parent on form data changes for preview updates
+  useEffect(() => {
+    if (!onChange) return;
+    const subscription = form.watch((value) => {
+      const images = (value as any).bannerImages ?? (value as any).images ?? [];
+      onChange({ title: value.title ?? "", content: value.content ?? "", images });
+    });
+    return () => subscription.unsubscribe();
+  }, [form, onChange]);
+
   return (
-    <main className="max-w-lg bg-white p-4 rounded-md mt-20">
+    <main className="max-w-lg bg-white p-4 rounded-md mt-5">
       <FormProvider
         className="space-y-4"
         methods={form}
