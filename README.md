@@ -1,1 +1,1 @@
-# Raajsi Admin Dahboard
+# DJ Admin Dahboard
