@@ -35,7 +35,17 @@ export const OrderColumns: ColumnDef<Order>[] = [
     header: "User",
     cell: ({ row }) => {
       const sa = row.original.shippingAddress || {};
-      const name = [sa.firstName, sa.lastName].filter(Boolean).join(" ") || row.original.buyer || "N/A";
+      const buyer = row.original.buyer as any;
+      // preference: shippingAddress name -> buyer.name -> buyer.firstName/lastName -> buyer string -> N/A
+      let name = "";
+      if (sa.firstName || sa.lastName) {
+        name = [sa.firstName, sa.lastName].filter(Boolean).join(" ");
+      } else if (typeof buyer === "string") {
+        name = buyer;
+      } else if (buyer && typeof buyer === "object") {
+        name = buyer.name || [buyer.firstName, buyer.lastName].filter(Boolean).join(" ") || "";
+      }
+      name = name || "N/A";
       return <span className="text-sm">{name}</span>;
     },
   },
@@ -43,7 +53,9 @@ export const OrderColumns: ColumnDef<Order>[] = [
     accessorKey: "phone",
     header: "Phone",
     cell: ({ row }) => {
-      const phone = row.original.shippingAddress?.phoneNumber || "N/A";
+      const sa = row.original.shippingAddress || {};
+      const buyer = row.original.buyer as any;
+      const phone = sa.phoneNumber || (buyer && typeof buyer === "object" && buyer.phoneNumber) || "N/A";
       return <span className="text-sm">{phone}</span>;
     },
   },
@@ -63,13 +75,16 @@ export const OrderColumns: ColumnDef<Order>[] = [
     accessorKey: "price",
     header: "Price",
     cell: ({ row }) => {
-      const products = row.original.products;
+      const products = row.original.products || [];
       let totalPrice = 0;
 
       products.forEach((product) => {
-        totalPrice += product.price;
+        const pPrice = Number(product?.price || 0);
+        totalPrice += isNaN(pPrice) ? 0 : pPrice;
       });
-      return <span className="text-sm font-semibold">₹ {totalPrice}</span>;
+      return (
+        <span className="text-sm font-semibold">₹ {totalPrice.toFixed(2).replace(/\.00$/, "")}</span>
+      );
     },
   },
   {

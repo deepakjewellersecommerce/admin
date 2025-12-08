@@ -17,10 +17,19 @@ interface ShippingAddress {
   country?: string;
 }
 
+export interface User {
+  _id?: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phoneNumber?: string;
+}
+
 export interface Order {
   _id: string;
   createdAt: string;
-  buyer: string;
+  buyer: string | User;
   products: ProductInOrder[];
   coupon_applied: string | null;
   shippingAddress: ShippingAddress;
