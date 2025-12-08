@@ -123,18 +123,31 @@ export const useGetUser = () => {
 export const useUploadImage = () => {
   return useMutation({
     mutationFn: async (formData: FormData) =>
-      await axios.post(
-        "https://api.cloudinary.com/v1_1/dbu6rwupz/upload",
-        formData
-      ),
+      (() => {
+        // If upload preset is available, ensure it is appended
+        try {
+          const preset = (import.meta as any).env?.VITE_CLOUDINARY_UPLOAD_PRESET;
+          if (preset && !formData.has("upload_preset")) {
+            formData.append("upload_preset", preset);
+          }
+        } catch (err) {
+          // ignore if import.meta is unavailable in some environments
+        }
+        return axios.post("https://api.cloudinary.com/v1_1/dbu6rwupz/upload", formData);
+      })(),
   });
 };
 
 export const uploadImage = async (formData: FormData) => {
-  const response = await axios.post(
-    "https://api.cloudinary.com/v1_1/dbu6rwupz/upload",
-    formData
-  );
+  try {
+    const preset = (import.meta as any).env?.VITE_CLOUDINARY_UPLOAD_PRESET;
+    if (preset && !formData.has("upload_preset")) {
+      formData.append("upload_preset", preset);
+    }
+  } catch (e) {
+    // ignore
+  }
+  const response = await axios.post("https://api.cloudinary.com/v1_1/dbu6rwupz/upload", formData);
 
   return response.data;
 };

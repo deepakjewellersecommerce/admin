@@ -10,9 +10,11 @@ import { Loader2 } from "lucide-react";
 import FormImageUploader from "../form/FormMultipleImages";
 
 const bannerSchema = z.object({
-  title: z.string(),
-  content: z.string(),
-  bannerImages: z.array(z.string().url()),
+  title: z.string().min(1, "Banner title is required"),
+  content: z.string().min(1, "Banner content is required"),
+  // Accept either string urls or file objects.
+  // We relax the schema to allow various shapes since the uploader stores Files or objects (existing urls)
+  bannerImages: z.array(z.any()).optional(),
 });
 
 export type BannerType = z.infer<typeof bannerSchema>;
