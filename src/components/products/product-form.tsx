@@ -121,9 +121,9 @@ const ProductForm = () => {
 
   const categoryOptions = useMemo(() => {
     if (data) {
-      return Array.from(data.data.data.categories).map((category: any) => {
+      return Array.from(data.data.categories).map((category: any) => {
         return {
-          label: nestedLabel(category,data.data.data.categories) || category.name,
+          label: nestedLabel(category,data.data.categories) || category.name,
           value: category._id,
         }}).sort((a, b) => a.label.localeCompare(b.label));
     }

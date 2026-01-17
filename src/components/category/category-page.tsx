@@ -19,7 +19,7 @@ const CategoryPage = () => {
 
   useEffect(() => {
     if (isSuccess) {
-      const categorys: any[] = Array.from(data.data.data.categories).filter(
+      const categorys: any[] = Array.from(data.data.categories).filter(
         (category: any) => category.parentId === id
       );
       setcategorys(categorys);
@@ -28,7 +28,7 @@ const CategoryPage = () => {
 
   const currentCategory: any = useMemo(() => {
     if (data)
-      return Array.from(data.data.data.categories).find(
+      return Array.from(data.data.categories).find(
         (category: any) => category._id === id
       );
 
@@ -37,7 +37,7 @@ const CategoryPage = () => {
 
   const parentCategory: any = useMemo(() => {
     if (data)
-      return Array.from(data.data.data.categories).find(
+      return Array.from(data.data.categories).find(
         (category: any) => category._id === currentCategory?.parentId
       );
 

@@ -98,11 +98,11 @@ const UpdateProductForm = () => {
   const { data, isLoading } = useGetCategories();
   const categoryOptions = useMemo(() => {
     if (data) {
-      const categories = Array.from(data.data.data.categories)
+      const categories = Array.from(data.data.categories)
         .map((category: any) => {
           return {
             label:
-              nestedLabel(category, data.data.data.categories) || category.name,
+              nestedLabel(category, data.data.categories) || category.name,
             value: category._id,
           };
         })

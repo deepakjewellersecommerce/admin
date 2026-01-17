@@ -13,9 +13,12 @@ import { DashboardIcon } from "@radix-ui/react-icons";
 import {
   Box,
   BoxIcon,
+  Coins,
+  FolderTree,
   GalleryVertical,
   Gift,
   Grid,
+  Layers,
   // Paintbrush2,
   PenBox,
   Settings2,
@@ -43,6 +46,21 @@ const Navbar: Tab[] = [
     href: "/settings/web",
   },
   {
+    label: "Metal Pricing",
+    icon: Coins,
+    href: "/pricing/metals",
+  },
+  {
+    label: "Catalog",
+    icon: Layers,
+    href: "/catalog",
+    subMenu: [
+      { label: "Categories", href: "/catalog/categories" },
+      { label: "Subcategories", href: "/catalog/subcategories" },
+      { label: "Price Components", href: "/catalog/price-components" },
+    ],
+  },
+  {
     label: "Banner List",
     icon: GalleryVertical,
     href: "/banners/list",
@@ -52,15 +70,16 @@ const Navbar: Tab[] = [
     icon: BoxIcon,
     href: "/brands/list",
   },
-  {
-    label: "Category",
-    icon: Grid,
-    href: "/categories",
-    subMenu: [
-      { label: "Add New Category", href: "/categories/add" },
-      { label: "Category List", href: "/categories/list" },
-    ],
-  },
+  // Old category management - replaced by Catalog > Categories
+  // {
+  //   label: "Category",
+  //   icon: Grid,
+  //   href: "/categories",
+  //   subMenu: [
+  //     { label: "Add New Category", href: "/categories/add" },
+  //     { label: "Category List", href: "/categories/list" },
+  //   ],
+  // },
   {
     label: "Products",
     icon: Box,

@@ -51,7 +51,7 @@ const EditCategoryForm = () => {
   };
   const defaultValues: CategoryFormType = useMemo(() => {
     if (!data) return null;
-    const category = data.data.data.categories.find(
+    const category = data.data.categories.find(
       (category: any) => category._id === id
     );
     if (category)

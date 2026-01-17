@@ -26,7 +26,7 @@ const CategoryList = () => {
 
   const categories: Category[] = useMemo(() => {
     if (isSuccess) {
-      const categories: Category[] = Array.from(data.data.data.categories);
+      const categories: Category[] = Array.from(data.data.categories);
 
       return categories
         .filter((category) =>

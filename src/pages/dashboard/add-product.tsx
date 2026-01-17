@@ -1,9 +1,9 @@
-import ProductForm from "@/components/products/product-form";
+import ProductFormV2 from "@/components/products/product-form-v2";
 
 const AddProductPage = () => {
   return (
     <div className="bg-white rounded p-4">
-      <ProductForm />
+      <ProductFormV2 />
     </div>
   );
 };

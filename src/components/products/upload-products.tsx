@@ -57,7 +57,7 @@ const UploadProducts = () => {
 
   const categoryOptions = useMemo(() => {
     if (data)
-      return Array.from(data.data.data.categories).map((category: any) => ({
+      return Array.from(data.data.categories).map((category: any) => ({
         label: category.name,
         value: category._id,
       }));

@@ -13,6 +13,7 @@ import {
   BlogsList,
   BrandsList,
   CartView,
+  CategoryHierarchyPage,
   CategoryList,
   CategoryPage,
   ColorList,
@@ -26,7 +27,9 @@ import {
   LoginPage,
   LoyaltyProgramSettings,
   LoyaltyUsersList,
+  MetalPricingDashboard,
   NoticationPage,
+  PriceComponentsPage,
   OrderView,
   OrdersList,
   Page404,
@@ -42,6 +45,8 @@ import {
   UploadProducts,
   UsersList,
   WebSettingsForm,
+  SubcategoriesPage,
+  CategoryManagementPage,
 } from "./elements";
 import ProductRatingList from "@/components/product-rating/product-rating-list";
 import UpdateRatingForm from "@/components/review/update-review-form";
@@ -273,6 +278,23 @@ export default function Router() {
         {
           path: "colors/:id/edit",
           element: <EditColorForm />,
+        },
+        // Multi-Metal Pricing & Catalog Routes
+        {
+          path: "pricing/metals",
+          element: <MetalPricingDashboard />,
+        },
+        {
+          path: "catalog/categories",
+          element: <CategoryManagementPage />,
+        },
+        {
+          path: "catalog/subcategories",
+          element: <SubcategoriesPage />,
+        },
+        {
+          path: "catalog/price-components",
+          element: <PriceComponentsPage />,
         },
       ],
     },

@@ -64,3 +64,10 @@ export const WebSettingsForm = Loadable(lazy(() => import("@/pages/dashboard/web
 // Loyalty Management
 export const LoyaltyUsersList = Loadable(lazy(() => import("@/components/loyalty/loyalty-users-list")));
 export const LoyaltyProgramSettings = Loadable(lazy(() => import("@/components/loyalty/loyalty-program-settings")));
+
+// Multi-Metal Pricing & Catalog Management
+export const MetalPricingDashboard = Loadable(lazy(() => import("@/pages/dashboard/metal-pricing")));
+export const CategoryHierarchyPage = Loadable(lazy(() => import("@/pages/dashboard/category-hierarchy")));
+export const SubcategoriesPage = Loadable(lazy(() => import("@/pages/dashboard/subcategories")));
+export const PriceComponentsPage = Loadable(lazy(() => import("@/pages/dashboard/price-components")));
+export const CategoryManagementPage = Loadable(lazy(() => import("@/pages/dashboard/category-management")));
