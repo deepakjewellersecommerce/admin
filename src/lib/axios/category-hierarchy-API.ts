@@ -118,6 +118,9 @@ export interface PricingComponent {
   originalCalculationType?: string | null;
   originalValue?: number | null;
   originalFormula?: string | null;
+  // UI flags (optional)
+  isVisible?: boolean;
+  isActive?: boolean;
 }
 
 export interface FreezeHistoryEntry {
@@ -231,6 +234,11 @@ export const updateCategory = async (id: string, data: Partial<Category>) => {
   return response.data;
 };
 
+export const getCategoryImpact = async (id: string) => {
+  const response = await instance.get(`/admin/categories/categories/${id}/impact`);
+  return response.data;
+};
+
 // ==================== HIERARCHY HELPERS ====================
 
 export const getFullHierarchy = async () => {
@@ -289,6 +297,11 @@ export const updateSubcategory = async (id: string, data: Partial<Subcategory>) 
   return response.data;
 };
 
+export const getSubcategoryImpact = async (id: string) => {
+  const response = await instance.get(`/admin/subcategories/${id}/impact`);
+  return response.data;
+};
+
 export const deleteSubcategory = async (id: string, force?: boolean) => {
   const response = await instance.delete(`/admin/subcategories/${id}`, {
     params: { force }
@@ -307,6 +320,27 @@ export const searchSubcategories = async (q: string, params?: {
 }) => {
   const response = await instance.get("/admin/subcategories/search", {
     params: { q, ...params }
+  });
+  return response.data;
+};
+
+export const checkSubcategoryAvailability = async (params: { categoryId: string; parentSubcategoryId?: string | null; idAttribute: string }) => {
+  // Clean params: omit parentSubcategoryId when null/undefined or the string 'null'
+  const cleanParams: Record<string, any> = {
+    categoryId: params.categoryId,
+    idAttribute: params.idAttribute,
+  };
+  if (params.parentSubcategoryId && params.parentSubcategoryId !== "null") {
+    cleanParams.parentSubcategoryId = params.parentSubcategoryId;
+  }
+
+  // Debugging: log the exact params used for the request
+  if (import.meta.env.DEV) {
+    console.debug("checkSubcategoryAvailability: outgoing params=", cleanParams);
+  }
+
+  const response = await instance.get("/admin/subcategories/check-availability", {
+    params: cleanParams,
   });
   return response.data;
 };
@@ -413,6 +447,7 @@ export default {
   getCategory,
   createCategory,
   updateCategory,
+  getCategoryImpact,
   // Hierarchy
   getFullHierarchy,
   getCascadeOptions,
@@ -422,6 +457,7 @@ export default {
   getSubcategory,
   createSubcategory,
   updateSubcategory,
+  getSubcategoryImpact,
   deleteSubcategory,
   getSubcategoryTree,
   searchSubcategories,

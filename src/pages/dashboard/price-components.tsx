@@ -48,11 +48,8 @@ import {
   Trash2,
   Calculator,
   Lock,
-  Unlock,
   AlertCircle,
   GripVertical,
-  Check,
-  X,
 } from "lucide-react";
 import {
   useGetAllComponents,
@@ -89,9 +86,10 @@ const PriceComponentsPage = () => {
   const { mutate: validateFormula, isPending: isValidating } = useValidateFormula();
 
   const components: PriceComponent[] = componentsData?.components || [];
-  const calculationTypes = calculationTypesData?.types || [];
-  const formulaVariables = formulaVariablesData?.variables || [];
-  const operators = formulaVariablesData?.operators || ["+", "-", "×", "÷", "(", ")"];
+  // calculationTypes comes from API response -> response.data -> { types }
+  const calculationTypes = calculationTypesData?.data?.types || [];
+  const formulaVariables = formulaVariablesData?.data?.variables || [];
+  const operators = formulaVariablesData?.data?.operators || ["+", "-", "×", "÷", "(", ")"];
 
   const resetForm = () => {
     setFormData({});

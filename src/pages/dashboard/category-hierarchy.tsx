@@ -1,9 +1,10 @@
 /**
  * Category Hierarchy Management
  * Manages the 5-level category structure: Material -> Gender -> Item -> Category -> Subcategory
+ * Single form with smart depth detection and real-time ID preview
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -38,7 +39,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -66,17 +66,20 @@ import {
   useUpdateGender,
   useUpdateItem,
   useUpdateCategory,
+  useGetCategoryImpact,
 } from "@/lib/react-query/category-hierarchy-query";
 import { useGetMetalTypes } from "@/lib/react-query/metal-price-query";
 import { Material, Gender, Item, Category } from "@/lib/axios/category-hierarchy-API";
 
 const CategoryHierarchyPage = () => {
-  const [activeTab, setActiveTab] = useState("materials");
-  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
+  const [editLevel, setEditLevel] = useState<string>("");
+  const [showImpactModal, setShowImpactModal] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [previewId, setPreviewId] = useState<string>("");
 
   // Queries
   const { data: materialsData, isLoading: isLoadingMaterials } = useGetAllMaterials({
@@ -93,6 +96,11 @@ const CategoryHierarchyPage = () => {
   });
   const { data: metalTypesData } = useGetMetalTypes();
 
+  // Impact query for edit confirmation
+  const { data: impactData, isLoading: isLoadingImpact } = useGetCategoryImpact(
+    editItem?._id || ""
+  );
+
   // Mutations
   const { mutate: createMaterial, isPending: isCreatingMaterial } = useCreateMaterial();
   const { mutate: createGender, isPending: isCreatingGender } = useCreateGender();
@@ -103,34 +111,91 @@ const CategoryHierarchyPage = () => {
   const { mutate: updateItem, isPending: isUpdatingItem } = useUpdateItem();
   const { mutate: updateCategory, isPending: isUpdatingCategory } = useUpdateCategory();
 
-  const materials: Material[] = materialsData?.data?.materials || [];
-  const genders: Gender[] = gendersData?.data?.genders || [];
-  const items: Item[] = itemsData?.data?.items || [];
-  const categories: Category[] = categoriesData?.data?.categories || [];
-  const metalTypes = metalTypesData?.data?.types || [];
+  const materials = materialsData?.materials || [];
+  const genders = gendersData?.genders || [];
+  const items = itemsData?.items || [];
+  const categories = categoriesData?.categories || [];
+  const metalTypes = metalTypesData?.metalTypes || [];
+
+  // Update preview ID when form data changes
+  useEffect(() => {
+    const generatePreviewId = () => {
+      const parts = [];
+      if (formData.materialId) {
+        const material = materials.find((m: any) => m._id === formData.materialId);
+        if (material) parts.push(material.idAttribute);
+      }
+      if (formData.genderId) {
+        const gender = genders.find((g: any) => g._id === formData.genderId);
+        if (gender) parts.push(gender.idAttribute);
+      }
+      if (formData.itemId) {
+        const item = items.find((i: any) => i._id === formData.itemId);
+        if (item) parts.push(item.idAttribute);
+      }
+      if (formData.idAttribute) {
+        parts.push(formData.idAttribute.toUpperCase());
+      }
+      return parts.join("");
+    };
+
+    setPreviewId(generatePreviewId());
+  }, [formData, materials, genders, items]);
 
   const resetForm = () => {
     setFormData({});
     setEditItem(null);
-    setShowAddDialog(false);
+    setEditLevel("");
+    setShowDialog(false);
+    setShowImpactModal(false);
+    setPreviewId("");
   };
 
   const handleAdd = () => {
     setEditItem(null);
+    setEditLevel("");
     setFormData({});
-    setShowAddDialog(true);
+    setShowDialog(true);
   };
 
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: any, level: string) => {
     setEditItem(item);
-    setFormData({ ...item });
-    setShowAddDialog(true);
+    setEditLevel(level);
+    setFormData({
+      name: item.name,
+      idAttribute: item.idAttribute,
+      materialId: item.materialId?._id || item.materialId,
+      genderId: item.genderId?._id || item.genderId,
+      itemId: item.itemId?._id || item.itemId,
+      metalType: item.metalType,
+      description: item.description,
+      imageUrl: item.imageUrl,
+      isActive: item.isActive,
+      sortOrder: item.sortOrder,
+      seoTitle: item.seoTitle,
+      seoDescription: item.seoDescription,
+    });
+    setShowDialog(true);
   };
 
   const handleSubmit = () => {
-    const isEditing = !!editItem;
+    if (!formData.name) return;
 
-    switch (activeTab) {
+    const isEditing = !!editItem;
+    if (isEditing) {
+      // Show impact modal for edits
+      setShowImpactModal(true);
+    } else {
+      // Create directly
+      performSubmit();
+    }
+  };
+
+  const performSubmit = () => {
+    const isEditing = !!editItem;
+    const level = editLevel || determineLevel();
+
+    switch (level) {
       case "materials":
         if (isEditing) {
           updateMaterial(
@@ -174,6 +239,16 @@ const CategoryHierarchyPage = () => {
     }
   };
 
+  const determineLevel = () => {
+    if (formData.itemId && formData.idAttribute) return "categories";
+    if (formData.genderId && formData.idAttribute) return "items";
+    if (formData.materialId && formData.idAttribute) return "genders";
+    if (formData.idAttribute) return "materials";
+    return "materials";
+  };
+
+
+
   const isPending =
     isCreatingMaterial ||
     isCreatingGender ||
@@ -212,251 +287,247 @@ const CategoryHierarchyPage = () => {
   ];
 
   const renderForm = () => {
-    switch (activeTab) {
-      case "materials":
-        return (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={formData.name || ""}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Gold 22K"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="idAttribute">ID Attribute *</Label>
-              <Input
-                id="idAttribute"
-                value={formData.idAttribute || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, idAttribute: e.target.value.toUpperCase() })
-                }
-                placeholder="e.g., G22"
-                disabled={!!editItem}
-              />
-              <p className="text-xs text-muted-foreground">
-                Short code used in product SKUs (cannot be changed after creation)
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="metalType">Metal Type *</Label>
-              <Select
-                value={formData.metalType || ""}
-                onValueChange={(value) => setFormData({ ...formData, metalType: value })}
-                disabled={!!editItem}
+    const isEditing = !!editItem;
+    const level = editLevel || determineLevel();
+
+    return (
+      <div className="space-y-4">
+        {/* Material Selection */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="materialId">Material *</Label>
+            {!isEditing && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Quick create material
+                  const name = prompt("Enter material name:");
+                  if (name) {
+                    createMaterial(
+                      { name, idAttribute: "", metalType: "GOLD_24K", isActive: true },
+                      {
+                        onSuccess: (newMaterial: any) => {
+                          setFormData({ ...formData, materialId: newMaterial._id });
+                        },
+                      }
+                    );
+                  }
+                }}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select metal type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {metalTypes.map((type: any) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.displayName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isActive"
-                checked={formData.isActive !== false}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, isActive: checked })
-                }
-              />
-              <Label htmlFor="isActive">Active</Label>
-            </div>
-          </>
-        );
+                <Plus className="h-3 w-3 mr-1" />
+                Quick Add
+              </Button>
+            )}
+          </div>
+          <Select
+            value={formData.materialId || ""}
+            onValueChange={(value) => setFormData({ ...formData, materialId: value })}
+            disabled={isEditing}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select material" />
+            </SelectTrigger>
+            <SelectContent>
+              {materials.map((m: any) => (
+                <SelectItem key={m._id} value={m._id}>
+                  {m.name} ({m.idAttribute})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      case "genders":
-        return (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={formData.name || ""}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Women"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="idAttribute">ID Attribute *</Label>
-              <Input
-                id="idAttribute"
-                value={formData.idAttribute || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, idAttribute: e.target.value.toUpperCase() })
-                }
-                placeholder="e.g., F"
-                disabled={!!editItem}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isActive"
-                checked={formData.isActive !== false}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, isActive: checked })
-                }
-              />
-              <Label htmlFor="isActive">Active</Label>
-            </div>
-          </>
-        );
-
-      case "items":
-        return (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={formData.name || ""}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Necklace"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="idAttribute">ID Attribute *</Label>
-              <Input
-                id="idAttribute"
-                value={formData.idAttribute || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, idAttribute: e.target.value.toUpperCase() })
-                }
-                placeholder="e.g., N"
-                disabled={!!editItem}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Input
-                id="description"
-                value={formData.description || ""}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Optional description"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isActive"
-                checked={formData.isActive !== false}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, isActive: checked })
-                }
-              />
-              <Label htmlFor="isActive">Active</Label>
-            </div>
-          </>
-        );
-
-      case "categories":
-        return (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={formData.name || ""}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Traditional"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="idAttribute">ID Attribute *</Label>
-              <Input
-                id="idAttribute"
-                value={formData.idAttribute || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, idAttribute: e.target.value.toUpperCase() })
-                }
-                placeholder="e.g., T"
-                disabled={!!editItem}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="materialId">Material *</Label>
-              <Select
-                value={formData.materialId || ""}
-                onValueChange={(value) => setFormData({ ...formData, materialId: value })}
-                disabled={!!editItem}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select material" />
-                </SelectTrigger>
-                <SelectContent>
-                  {materials.map((m) => (
-                    <SelectItem key={m._id} value={m._id}>
-                      {m.name} ({m.idAttribute})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
+        {/* Gender Selection - Show if Material selected */}
+        {formData.materialId && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
               <Label htmlFor="genderId">Gender *</Label>
-              <Select
-                value={formData.genderId || ""}
-                onValueChange={(value) => setFormData({ ...formData, genderId: value })}
-                disabled={!!editItem}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  {genders.map((g) => (
-                    <SelectItem key={g._id} value={g._id}>
-                      {g.name} ({g.idAttribute})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {!isEditing && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const name = prompt("Enter gender name:");
+                    if (name) {
+                      createGender(
+                        { name, idAttribute: "", isActive: true },
+                        {
+                          onSuccess: (newGender: any) => {
+                            setFormData({ ...formData, genderId: newGender._id });
+                          },
+                        }
+                      );
+                    }
+                  }}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Quick Add
+                </Button>
+              )}
             </div>
-            <div className="space-y-2">
+            <Select
+              value={formData.genderId || ""}
+              onValueChange={(value) => setFormData({ ...formData, genderId: value })}
+              disabled={isEditing}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                {genders.map((g: any) => (
+                  <SelectItem key={g._id} value={g._id}>
+                    {g.name} ({g.idAttribute})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Item Selection - Show if Gender selected */}
+        {formData.genderId && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
               <Label htmlFor="itemId">Item Type *</Label>
-              <Select
-                value={formData.itemId || ""}
-                onValueChange={(value) => setFormData({ ...formData, itemId: value })}
-                disabled={!!editItem}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select item type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {items.map((i) => (
-                    <SelectItem key={i._id} value={i._id}>
-                      {i.name} ({i.idAttribute})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {!isEditing && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const name = prompt("Enter item name:");
+                    if (name) {
+                      createItem(
+                        { name, idAttribute: "", description: "", isActive: true },
+                        {
+                          onSuccess: (newItem: any) => {
+                            setFormData({ ...formData, itemId: newItem._id });
+                          },
+                        }
+                      );
+                    }
+                  }}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Quick Add
+                </Button>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isActive"
-                checked={formData.isActive !== false}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, isActive: checked })
-                }
-              />
-              <Label htmlFor="isActive">Active</Label>
+            <Select
+              value={formData.itemId || ""}
+              onValueChange={(value) => setFormData({ ...formData, itemId: value })}
+              disabled={isEditing}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select item type" />
+              </SelectTrigger>
+              <SelectContent>
+                {items.map((i: any) => (
+                  <SelectItem key={i._id} value={i._id}>
+                    {i.name} ({i.idAttribute})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Category Name - Show if Item selected */}
+        {formData.itemId && (
+          <div className="space-y-2">
+            <Label htmlFor="name">Category Name *</Label>
+            <Input
+              id="name"
+              value={formData.name || ""}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="e.g., Traditional"
+            />
+          </div>
+        )}
+
+        {/* ID Attribute */}
+        <div className="space-y-2">
+          <Label htmlFor="idAttribute">ID Attribute *</Label>
+          <Input
+            id="idAttribute"
+            value={formData.idAttribute || ""}
+            onChange={(e) =>
+              setFormData({ ...formData, idAttribute: e.target.value.toUpperCase() })
+            }
+            placeholder="e.g., T"
+            disabled={isEditing}
+          />
+          <p className="text-xs text-muted-foreground">
+            Short code used in product SKUs (cannot be changed after creation)
+          </p>
+        </div>
+
+        {/* Real-time ID Preview */}
+        {previewId && (
+          <div className="space-y-2">
+            <Label>Preview ID</Label>
+            <div className="p-2 bg-muted rounded text-sm font-mono">
+              {previewId}
             </div>
-          </>
-        );
-    }
+          </div>
+        )}
+
+        {/* Metal Type - Only for Materials */}
+        {level === "materials" && (
+          <div className="space-y-2">
+            <Label htmlFor="metalType">Metal Type *</Label>
+            <Select
+              value={formData.metalType || ""}
+              onValueChange={(value) => setFormData({ ...formData, metalType: value })}
+              disabled={isEditing}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select metal type" />
+              </SelectTrigger>
+              <SelectContent>
+                {metalTypes.map((type: any) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.displayName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Description - For Items and Categories */}
+        {(level === "items" || level === "categories") && (
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Input
+              id="description"
+              value={formData.description || ""}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Optional description"
+            />
+          </div>
+        )}
+
+        {/* Active Switch */}
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="isActive"
+            checked={formData.isActive !== false}
+            onCheckedChange={(checked) =>
+              setFormData({ ...formData, isActive: checked })
+            }
+          />
+          <Label htmlFor="isActive">Active</Label>
+        </div>
+      </div>
+    );
   };
 
   const renderTable = () => {
-    const isLoading =
-      (activeTab === "materials" && isLoadingMaterials) ||
-      (activeTab === "genders" && isLoadingGenders) ||
-      (activeTab === "items" && isLoadingItems) ||
-      (activeTab === "categories" && isLoadingCategories);
+    const isLoading = isLoadingMaterials || isLoadingGenders || isLoadingItems || isLoadingCategories;
 
     if (isLoading) {
       return (
@@ -468,192 +539,80 @@ const CategoryHierarchyPage = () => {
       );
     }
 
-    switch (activeTab) {
-      case "materials":
-        return (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>ID</TableHead>
-                <TableHead>Metal Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {materials.map((m) => (
-                <TableRow key={m._id}>
-                  <TableCell className="font-medium">{m.name}</TableCell>
-                  <TableCell>
-                    <code className="text-sm bg-muted px-1 rounded">{m.idAttribute}</code>
-                  </TableCell>
-                  <TableCell>{m.metalType}</TableCell>
-                  <TableCell>
-                    <Badge variant={m.isActive ? "default" : "secondary"}>
-                      {m.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(m)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {materials.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    No materials found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        );
+    // Combine all levels into one table
+    const allItems = [
+      ...materials.map(m => ({ ...m, level: 'Material', levelIcon: Diamond })),
+      ...genders.map(g => ({ ...g, level: 'Gender', levelIcon: Users })),
+      ...items.map(i => ({ ...i, level: 'Item', levelIcon: Grid3X3 })),
+      ...categories.map(c => ({ ...c, level: 'Category', levelIcon: Tag })),
+    ];
 
-      case "genders":
-        return (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>ID</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {genders.map((g) => (
-                <TableRow key={g._id}>
-                  <TableCell className="font-medium">{g.name}</TableCell>
-                  <TableCell>
-                    <code className="text-sm bg-muted px-1 rounded">{g.idAttribute}</code>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={g.isActive ? "default" : "secondary"}>
-                      {g.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(g)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {genders.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
-                    No genders found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        );
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Level</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>ID</TableHead>
+            <TableHead>Details</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {allItems.map((item) => {
+            const Icon = item.levelIcon;
+            let details = '';
+            let fullId = item.idAttribute;
 
-      case "items":
-        return (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>ID</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((i) => (
-                <TableRow key={i._id}>
-                  <TableCell className="font-medium">{i.name}</TableCell>
-                  <TableCell>
-                    <code className="text-sm bg-muted px-1 rounded">{i.idAttribute}</code>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {i.description || "-"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={i.isActive ? "default" : "secondary"}>
-                      {i.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(i)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {items.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    No item types found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        );
+            if (item.level === 'Category') {
+              const material = typeof item.materialId === 'object' ? item.materialId : null;
+              const gender = typeof item.genderId === 'object' ? item.genderId : null;
+              const itemType = typeof item.itemId === 'object' ? item.itemId : null;
+              details = `${material?.name || '?'} → ${gender?.name || '?'} → ${itemType?.name || '?'}`;
+              fullId = item.fullCategoryId;
+            } else if (item.level === 'Material') {
+              details = item.metalType;
+            }
 
-      case "categories":
-        return (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Full ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Path</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
+            return (
+              <TableRow key={item._id}>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4" />
+                    {item.level}
+                  </div>
+                </TableCell>
+                <TableCell className="font-medium">{item.name}</TableCell>
+                <TableCell>
+                  <code className="text-sm bg-muted px-1 rounded">{fullId}</code>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {details || item.description || '-'}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={item.isActive ? "default" : "secondary"}>
+                    {item.isActive ? "Active" : "Inactive"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Button variant="ghost" size="sm" onClick={() => handleEdit(item, item.level.toLowerCase() + 's')}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {categories.map((c) => {
-                const material =
-                  typeof c.materialId === "object" ? c.materialId : null;
-                const gender = typeof c.genderId === "object" ? c.genderId : null;
-                const item = typeof c.itemId === "object" ? c.itemId : null;
-
-                return (
-                  <TableRow key={c._id}>
-                    <TableCell>
-                      <code className="text-sm bg-muted px-1 rounded">
-                        {c.fullCategoryId}
-                      </code>
-                    </TableCell>
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {material?.name || "?"} <ChevronRight className="h-3 w-3 inline" />{" "}
-                      {gender?.name || "?"} <ChevronRight className="h-3 w-3 inline" />{" "}
-                      {item?.name || "?"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={c.isActive ? "default" : "secondary"}>
-                        {c.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(c)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {categories.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    No categories found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        );
-    }
+            );
+          })}
+          {allItems.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center text-muted-foreground">
+                No hierarchy items found
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    );
   };
 
   return (
@@ -706,59 +665,96 @@ const CategoryHierarchyPage = () => {
 
       {/* Main Content */}
       <Card>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <TabsList>
-                {tabConfig.map((tab) => (
-                  <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2">
-                    <tab.icon className="h-4 w-4" />
-                    {tab.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-                <DialogTrigger asChild>
-                  <Button onClick={handleAdd}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add {tabConfig.find((t) => t.id === activeTab)?.label.slice(0, -1)}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editItem ? "Edit" : "Add"}{" "}
-                      {tabConfig.find((t) => t.id === activeTab)?.label.slice(0, -1)}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {tabConfig.find((t) => t.id === activeTab)?.description}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">{renderForm()}</div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={resetForm}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleSubmit} disabled={isPending}>
-                      {isPending ? "Saving..." : editItem ? "Update" : "Create"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-semibold">All Hierarchy Levels</h2>
+              <p className="text-sm text-muted-foreground">
+                Materials, Genders, Items, and Categories in one view
+              </p>
             </div>
-          </CardHeader>
-          <CardContent>
-            {tabConfig.map((tab) => (
-              <TabsContent key={tab.id} value={tab.id} className="m-0">
-                <div className="mb-4">
-                  <p className="text-sm text-muted-foreground">{tab.description}</p>
-                </div>
-                {renderTable()}
-              </TabsContent>
-            ))}
-          </CardContent>
-        </Tabs>
+            <Dialog open={showDialog} onOpenChange={setShowDialog}>
+              <DialogTrigger asChild>
+                <Button onClick={handleAdd}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Hierarchy Item
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editItem ? "Edit" : "Add"} Hierarchy Item
+                  </DialogTitle>
+                  <DialogDescription>
+                    Fill in the hierarchy fields. The form will show relevant fields based on your selections.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">{renderForm()}</div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={resetForm}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSubmit} disabled={isPending}>
+                    {isPending ? "Saving..." : editItem ? "Update" : "Create"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {renderTable()}
+        </CardContent>
       </Card>
+
+      {/* Impact Preview Modal */}
+      <Dialog open={showImpactModal} onOpenChange={setShowImpactModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Changes</DialogTitle>
+            <DialogDescription>
+              Review the impact of your changes before proceeding.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-muted rounded-lg">
+              <h4 className="font-medium mb-2">Changes to {editItem?.name}</h4>
+              <p className="text-sm text-muted-foreground">
+                You are updating a {editLevel?.slice(0, -1)} in the hierarchy.
+              </p>
+            </div>
+            {isLoadingImpact ? (
+              <Skeleton className="h-20" />
+            ) : impactData?.impact ? (
+              <div className="space-y-2">
+                <h4 className="font-medium">Affected Items:</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-blue-50 rounded">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {impactData.impact.productsCount || 0}
+                    </div>
+                    <div className="text-sm text-blue-600">Products</div>
+                  </div>
+                  <div className="p-3 bg-green-50 rounded">
+                    <div className="text-2xl font-bold text-green-600">
+                      {impactData.impact.subcategoriesCount || 0}
+                    </div>
+                    <div className="text-sm text-green-600">Subcategories</div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowImpactModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => { setShowImpactModal(false); performSubmit(); }}>
+              Confirm Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

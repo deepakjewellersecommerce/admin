@@ -12,12 +12,9 @@ import { PropsWithClassName } from "@/types";
 import { DashboardIcon } from "@radix-ui/react-icons";
 import {
   Box,
-  BoxIcon,
   Coins,
-  FolderTree,
   GalleryVertical,
   Gift,
-  Grid,
   Layers,
   // Paintbrush2,
   PenBox,
@@ -51,25 +48,20 @@ const Navbar: Tab[] = [
     href: "/pricing/metals",
   },
   {
-    label: "Catalog",
+    label: "Categories",
     icon: Layers,
-    href: "/catalog",
-    subMenu: [
-      { label: "Categories", href: "/catalog/categories" },
-      { label: "Subcategories", href: "/catalog/subcategories" },
-      { label: "Price Components", href: "/catalog/price-components" },
-    ],
+    href: "/catalog/categories",
   },
   {
     label: "Banner List",
     icon: GalleryVertical,
     href: "/banners/list",
   },
-  {
-    label: "Brand List",
-    icon: BoxIcon,
-    href: "/brands/list",
-  },
+  // {
+  //   label: "Brand List",
+  //   icon: BoxIcon,
+  //   href: "/brands/list",
+  // },
   // Old category management - replaced by Catalog > Categories
   // {
   //   label: "Category",
@@ -147,12 +139,12 @@ const Navbar: Tab[] = [
 const Sidebar = ({ className }: PropsWithClassName) => {
   return (
     <aside className={cn("bg-white", className)}>
-      <ScrollArea className="h-screen  px-6 py-6">
+      <ScrollArea className="h-screen px-3 py-4">
         <span className="block px-4">
-          <Logo className="text-primary " />
+          <Logo className="text-primary" />
         </span>
-        <div className="mt-16 grid gap-2 ">
-          <Accordion className=" grid gap-2 " type="single" collapsible>
+        <div className="mt-8 grid gap-1">
+          <Accordion className=" grid gap-1" type="single" collapsible>
             {Navbar.map((tab, i) => (
               <TabButton key={i} tab={tab} />
             ))}
@@ -182,13 +174,13 @@ const TabButton = ({ className, tab }: TabButtonProps) => {
         <AccordionItem className="border-none w-full" value={tab.href}>
           <AccordionTrigger
             className={cn(
-              "flex text-gray-600 w-full  font-semibold  rounded-md h-11 justify-start",
+              "flex text-gray-600 w-full font-semibold  rounded-md h-11 justify-start",
               activeStyles,
               buttonVariants({ variant: "ghost" }),
               className
             )}
           >
-            <div className="flex  mr-auto space-x-4">
+            <div className="flex mr-auto space-x-4">
               <tab.icon size={20} />
               <span className="font-medium tracking-wide text-[15px]">
                 {tab.label}

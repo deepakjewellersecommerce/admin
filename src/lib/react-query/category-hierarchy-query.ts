@@ -211,6 +211,35 @@ export const useUpdateCategory = () => {
   });
 };
 
+export const useDeleteCategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => categoryHierarchyAPI.deleteCategory(id),
+    onSuccess: () => {
+      toast.success("Category deleted successfully!");
+      queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "categories"] });
+      queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "hierarchy"] });
+    },
+    onError: (error: any) => {
+      const reason =
+        error?.response?.data?.error?.message ||
+        error?.response?.data?.message ||
+        (typeof error?.response?.data === 'string' ? error.response.data : null) ||
+        error?.message ||
+        "Failed to delete category";
+      toast.error(`${reason}`);
+    },
+  });
+};
+
+export const useGetCategoryImpact = (id: string) => {
+  return useQuery({
+    queryKey: ["categoryHierarchy", "categories", id, "impact"],
+    queryFn: () => categoryHierarchyAPI.getCategoryImpact(id),
+    enabled: Boolean(id),
+  });
+};
+
 // ==================== HIERARCHY HELPERS ====================
 
 export const useGetFullHierarchy = () => {
@@ -309,6 +338,23 @@ export const useUpdateSubcategory = () => {
   });
 };
 
+export const useGetSubcategoryImpact = (id: string) => {
+  return useQuery({
+    queryKey: ["subcategories", id, "impact"],
+    queryFn: () => categoryHierarchyAPI.getSubcategoryImpact(id),
+    enabled: Boolean(id),
+  });
+};
+
+export const useCheckSubcategoryAvailability = (params?: { categoryId?: string; parentSubcategoryId?: string | null; idAttribute?: string }) => {
+  return useQuery({
+    queryKey: ["subcategories", "check-availability", params],
+    queryFn: () => categoryHierarchyAPI.checkSubcategoryAvailability(params as any),
+    enabled: Boolean(params?.categoryId && params?.idAttribute),
+    staleTime: 30 * 1000,
+  });
+};
+
 export const useDeleteSubcategory = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -319,7 +365,13 @@ export const useDeleteSubcategory = () => {
       queryClient.invalidateQueries({ queryKey: ["subcategories"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to delete subcategory");
+      const reason =
+        error?.response?.data?.error?.message ||
+        error?.response?.data?.message ||
+        (typeof error?.response?.data === 'string' ? error.response.data : null) ||
+        error?.message ||
+        "Failed to delete subcategory";
+      toast.error(`${reason}`);
     },
   });
 };

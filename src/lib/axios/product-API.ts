@@ -118,6 +118,9 @@ export const productAPI = {
     }
     return instance.put(`/product/category/${categoryId}`, formData);
   },
+  deleteCategory: async (categoryId: string) => {
+    return instance.delete(`/product/category/${categoryId}/delete`);
+  },
   getWalletBalance: () => instance.get('/user/wallet'),
   getLowStockProducts: async (threshold = 5) => {
     // Use the inventory admin endpoint for low-stock data (admin UI)

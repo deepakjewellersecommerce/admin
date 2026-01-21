@@ -3,7 +3,7 @@
  * Level 5+ with unlimited nesting, tree view, and pricing configuration
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -15,14 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+
 import {
   Dialog,
   DialogContent,
@@ -30,7 +23,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -39,11 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -61,9 +49,9 @@ import {
   Search,
   Package,
 } from "lucide-react";
+import { Tooltip } from "@/components/ui/tooltip";
 import {
   useGetAllCategories,
-  useGetAllSubcategories,
   useGetSubcategoryTree,
   useCreateSubcategory,
   useUpdateSubcategory,
@@ -142,25 +130,34 @@ const SubcategoryTreeNode = ({
         </Badge>
 
         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onConfigurePricing(node)}
-            title="Configure Pricing"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => onEdit(node)}>
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(node)}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <Tooltip content="Configure Pricing">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onConfigurePricing(node)}
+              aria-label="Configure Pricing"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </Tooltip>
+
+          <Tooltip content="Edit">
+            <Button variant="ghost" size="sm" onClick={() => onEdit(node)} aria-label="Edit">
+              <Edit className="h-4 w-4" />
+            </Button>
+          </Tooltip>
+
+          <Tooltip content="Delete">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(node)}
+              className="text-destructive hover:text-destructive"
+              aria-label="Delete"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </Tooltip>
         </div>
       </div>
 
@@ -219,7 +216,7 @@ const SubcategoriesPage = () => {
     useRemoveSubcategoryPricing();
 
   const categories: Category[] = categoriesData?.data?.categories || [];
-  const tree: (Subcategory & { children?: Subcategory[] })[] = treeData?.tree || [];
+  const tree = useMemo(() => treeData?.data?.tree || [], [treeData]);
 
   // Filter tree based on search
   const filteredTree = useMemo(() => {
@@ -296,7 +293,7 @@ const SubcategoriesPage = () => {
       setFormData((prev) => ({ ...prev, slug: generated }));
       autoSlugRef.current = generated;
     }
-  }, [formData.name]);
+  }, [formData.name, formData.slug]);
 
   const handleDelete = (subcategory: Subcategory) => {
     setDeleteItem(subcategory);
@@ -313,7 +310,7 @@ const SubcategoriesPage = () => {
       .toLowerCase()
       .replace(/[^a-z0-9\s]/g, "")
       .trim()
-      .replace(/\s+/g, "_");
+      .replace(/\s+/g, "-");
 
   const computedSlug = (formData.slug || generateSlug(formData.name) || "").trim();
   const isSlugValid = Boolean(computedSlug);
@@ -481,7 +478,7 @@ const SubcategoriesPage = () => {
               </div>
             ) : (
               <div className="border rounded-lg p-4 max-h-[500px] overflow-auto">
-                {filteredTree.map((node) => (
+                {(filteredTree as (Subcategory & { children?: Subcategory[] })[]).map((node) => (
                   <SubcategoryTreeNode
                     key={node._id}
                     node={node}
@@ -698,11 +695,11 @@ const SubcategoriesPage = () => {
                     in this subcategory will use these settings.
                   </AlertDescription>
                 </Alert>
-                {pricingData?.pricingConfig && (
+                {pricingData?.data?.pricingConfig && (
                   <div className="border rounded-lg p-4">
                     <h4 className="font-medium mb-2">Components:</h4>
                     <div className="space-y-2">
-                      {pricingData.pricingConfig.components?.map((comp: any) => (
+                      {pricingData.data.pricingConfig.components?.map((comp: any) => (
                         <div
                           key={comp.componentKey}
                           className="flex justify-between text-sm"
@@ -740,7 +737,7 @@ const SubcategoriesPage = () => {
                   <AlertTitle>Inherits Pricing</AlertTitle>
                   <AlertDescription>
                     This subcategory currently inherits pricing from{" "}
-                    {pricingData?.pricingSource?.subcategoryName || "a parent"}.
+                    {pricingData?.data?.pricingSource?.subcategoryName || "a parent"}.
                   </AlertDescription>
                 </Alert>
                 <Button

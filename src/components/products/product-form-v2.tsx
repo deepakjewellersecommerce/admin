@@ -14,11 +14,11 @@ import FormGroupSelect from "../form/FormCombobox";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  useGetMaterials,
-  useGetGenders,
-  useGetItems,
-  useGetCategories as useGetCategoriesV2,
-  useGetSubcategories,
+  useGetAllMaterials as useGetMaterials,
+  useGetAllGenders as useGetGenders,
+  useGetAllItems as useGetItems,
+  useGetAllCategories as useGetCategoriesV2,
+  useGetAllSubcategories as useGetSubcategories,
 } from "@/lib/react-query/category-hierarchy-query";
 import { useGetPricePreview } from "@/lib/react-query/product-pricing-query";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -162,10 +162,18 @@ const ProductFormV2 = () => {
 
   // Fetch hierarchy data
   const { data: materialsData } = useGetMaterials();
-  const { data: gendersData } = useGetGenders(materialId);
-  const { data: itemsData } = useGetItems(materialId, genderId);
-  const { data: categoriesData } = useGetCategoriesV2(materialId, genderId, itemId);
-  const { data: subcategoriesData } = useGetSubcategories(materialId, genderId, itemId, categoryId);
+  const { data: gendersData } = useGetGenders({ includeInactive: true });
+  const { data: itemsData } = useGetItems({ includeInactive: true });
+  const { data: categoriesData } = useGetCategoriesV2({
+    materialId,
+    genderId,
+    itemId,
+    includeInactive: true,
+  });
+  const { data: subcategoriesData } = useGetSubcategories({
+    categoryId,
+    includeInactive: true,
+  });
 
   const { options: brandOptions } = useGetBrandOptions();
   const { mutate: addProduct, isPending } = useAddProduct();
@@ -173,40 +181,40 @@ const ProductFormV2 = () => {
 
   // Build options
   const materialOptions = useMemo(() => {
-    if (!materialsData?.data) return [];
-    return materialsData.data.map((m: any) => ({
+    const materials = materialsData?.data?.materials || [];
+    return materials.map((m: any) => ({
       label: `${m.name} (${m.metalType})`,
       value: m._id,
     }));
   }, [materialsData]);
 
   const genderOptions = useMemo(() => {
-    if (!gendersData?.data) return [];
-    return gendersData.data.map((g: any) => ({
+    const genders = gendersData?.data?.genders || [];
+    return genders.map((g: any) => ({
       label: g.name,
       value: g._id,
     }));
   }, [gendersData]);
 
   const itemOptions = useMemo(() => {
-    if (!itemsData?.data) return [];
-    return itemsData.data.map((i: any) => ({
+    const items = itemsData?.data?.items || [];
+    return items.map((i: any) => ({
       label: i.name,
       value: i._id,
     }));
   }, [itemsData]);
 
   const categoryOptions = useMemo(() => {
-    if (!categoriesData?.data) return [];
-    return categoriesData.data.map((c: any) => ({
+    const categories = categoriesData?.data?.categories || [];
+    return categories.map((c: any) => ({
       label: c.name,
       value: c._id,
     }));
   }, [categoriesData]);
 
   const subcategoryOptions = useMemo(() => {
-    if (!subcategoriesData?.data) return [];
-    return subcategoriesData.data.map((s: any) => ({
+    const subs = subcategoriesData?.data?.subcategories || [];
+    return subs.map((s: any) => ({
       label: s.name,
       value: s._id,
     }));

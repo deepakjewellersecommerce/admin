@@ -47,6 +47,9 @@ import {
   WebSettingsForm,
   SubcategoriesPage,
   CategoryManagementPage,
+  SubcategoryListPage,
+  AddCategoryPage,
+  AddSubcategoryPage,
 } from "./elements";
 import ProductRatingList from "@/components/product-rating/product-rating-list";
 import UpdateRatingForm from "@/components/review/update-review-form";
@@ -287,6 +290,26 @@ export default function Router() {
         {
           path: "catalog/categories",
           element: <CategoryManagementPage />,
+        },
+        {
+          path: "catalog/categories/add",
+          element: <AddCategoryPage />,
+        },
+        {
+          path: "catalog/categories/:categoryId",
+          element: <SubcategoryListPage />,
+        },
+        {
+          path: "catalog/categories/:categoryId/add",
+          element: <AddSubcategoryPage />,
+        },
+        {
+          path: "catalog/categories/:categoryId/:subId",
+          element: <SubcategoryListPage />,
+        },
+        {
+          path: "catalog/categories/:categoryId/:subId/add",
+          element: <AddSubcategoryPage />,
         },
         {
           path: "catalog/subcategories",
