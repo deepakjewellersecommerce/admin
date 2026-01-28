@@ -292,6 +292,10 @@ export default function Router() {
           element: <CategoryManagementPage />,
         },
         {
+          path: "catalog/hierarchy",
+          element: <CategoryHierarchyPage />,
+        },
+        {
           path: "catalog/categories/add",
           element: <AddCategoryPage />,
         },

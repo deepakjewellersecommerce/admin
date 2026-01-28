@@ -11,17 +11,9 @@ import {
   Check,
   X,
   LucideIcon,
-  RefreshCcw,
 } from "lucide-react"; // Import icons
 import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+// Removed unused Button and Card imports
 
 const DashboardHome = () => {
   // Define default metrics with useMemo to avoid recreation on each render
@@ -40,7 +32,8 @@ const DashboardHome = () => {
 
   const { data } = useDashboardData();
   const { data: lowStockData, isLoading: isLoadingLowStock } = useGetLowStockProducts(5);
-  const { mutate: updateAllPricing, isPending: isUpdatingPrices } = useBulkUpdatePricing();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { mutate: _updateAllPricing } = useBulkUpdatePricing();
   
   const lowStockItems = useMemo(() => {
     return lowStockData?.data?.data?.items || [];
@@ -80,10 +73,6 @@ const DashboardHome = () => {
       };
     });
   }, [defaultOtherMetrics, otherMetrics]);
-
-  const handleUpdateAllPricing = () => {
-    updateAllPricing();
-  };
 
   return (
     <div>

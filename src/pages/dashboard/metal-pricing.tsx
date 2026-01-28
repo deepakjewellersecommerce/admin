@@ -12,7 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,7 +52,6 @@ import {
   useBulkFetchMetalPrices,
   useGetMetalPriceHistory,
   useGetAffectedProducts,
-  usePreviewBulkRecalculation,
   useConfirmBulkRecalculation,
   useInitializeMetalPrices,
 } from "@/lib/react-query/metal-price-query";
@@ -90,7 +88,6 @@ const MetalPricingDashboard = () => {
   // Mutations
   const { mutate: updatePrice, isPending: isUpdating } = useUpdateMetalPrice();
   const { mutate: bulkFetch, isPending: isFetching } = useBulkFetchMetalPrices();
-  const { mutate: previewRecalc, isPending: isPreviewing } = usePreviewBulkRecalculation();
   const { mutate: confirmRecalc, isPending: isRecalculating } = useConfirmBulkRecalculation();
   const { mutate: initializePrices, isPending: isInitializing } = useInitializeMetalPrices();
   const { mutate: bulkRecalculate, isPending: isBulkRecalculating } = useBulkRecalculatePrices();
@@ -207,7 +204,7 @@ const MetalPricingDashboard = () => {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => bulkFetch()}
+            onClick={() => bulkFetch(undefined)}
             disabled={isFetching}
           >
             <RefreshCcw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />

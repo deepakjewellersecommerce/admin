@@ -279,6 +279,14 @@ export const useQuickCreate = () => {
 
 // ==================== SUBCATEGORIES ====================
 
+export const useGetAllSubcategoriesFlat = (params?: { includeInactive?: boolean }) => {
+  return useQuery({
+    queryKey: ["subcategories", "flat", params],
+    queryFn: () => categoryHierarchyAPI.getAllSubcategoriesFlat(params),
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 export const useGetAllSubcategories = (params?: {
   categoryId?: string;
   materialId?: string;

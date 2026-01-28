@@ -102,11 +102,12 @@ export interface SubcategoryPricing {
 }
 
 export interface PricingComponent {
+  componentId?: string; // Reference to PriceComponent._id (required by backend)
   componentKey: string;
   componentName: string;
   calculationType: string;
   value: number;
-  formula?: string;
+  formula?: string | null;
   formulaChips?: string[];
   percentageOf?: string;
   isFrozen: boolean;
@@ -118,9 +119,9 @@ export interface PricingComponent {
   originalCalculationType?: string | null;
   originalValue?: number | null;
   originalFormula?: string | null;
-  // UI flags (optional)
   isVisible?: boolean;
   isActive?: boolean;
+  sortOrder?: number;
 }
 
 export interface FreezeHistoryEntry {
@@ -139,6 +140,23 @@ export interface HierarchyTree {
   genders: Gender[];
   items: Item[];
   categories: Category[];
+}
+
+export interface SubcategoryFlat {
+  _id: string;
+  name: string;
+  fullCategoryId: string;
+  displayLabel: string;
+  material: { _id: string; name: string; metalType: string } | null;
+  gender: { _id: string; name: string } | null;
+  item: { _id: string; name: string } | null;
+  category: { _id: string; name: string } | null;
+  materialId: string;
+  genderId: string;
+  itemId: string;
+  categoryId: string;
+  hasPricingConfig: boolean;
+  isActive: boolean;
 }
 
 // ==================== MATERIALS ====================
@@ -234,6 +252,11 @@ export const updateCategory = async (id: string, data: Partial<Category>) => {
   return response.data;
 };
 
+export const deleteCategory = async (id: string) => {
+  const response = await instance.delete(`/admin/categories/categories/${id}`);
+  return response.data;
+};
+
 export const getCategoryImpact = async (id: string) => {
   const response = await instance.get(`/admin/categories/categories/${id}/impact`);
   return response.data;
@@ -264,6 +287,11 @@ export const quickCreate = async (level: number | string, data: Record<string, u
 };
 
 // ==================== SUBCATEGORIES ====================
+
+export const getAllSubcategoriesFlat = async (params?: { includeInactive?: boolean }) => {
+  const response = await instance.get("/admin/categories/subcategories/flat", { params });
+  return response.data;
+};
 
 export const getAllSubcategories = async (params?: {
   categoryId?: string;
@@ -447,12 +475,14 @@ export default {
   getCategory,
   createCategory,
   updateCategory,
+  deleteCategory,
   getCategoryImpact,
   // Hierarchy
   getFullHierarchy,
   getCascadeOptions,
   quickCreate,
   // Subcategories
+  getAllSubcategoriesFlat,
   getAllSubcategories,
   getSubcategory,
   createSubcategory,
@@ -461,6 +491,7 @@ export default {
   deleteSubcategory,
   getSubcategoryTree,
   searchSubcategories,
+  checkSubcategoryAvailability,
   getSubcategoryAncestors,
   getSubcategoryDescendants,
   // Subcategory Pricing
