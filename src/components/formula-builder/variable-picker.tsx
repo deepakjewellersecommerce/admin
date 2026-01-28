@@ -56,7 +56,7 @@ const variables: VariableInfo[] = [
 export function VariablePicker({ onSelectVariable, disabled = false }: VariablePickerProps) {
   return (
     <Select
-      onValueChange={(value) => {
+      onValueChange={(value: string) => {
         onSelectVariable(value);
       }}
       disabled={disabled}
