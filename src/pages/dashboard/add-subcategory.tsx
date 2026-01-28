@@ -15,6 +15,7 @@ import {
   useGetSubcategory,
   useCheckSubcategoryAvailability,
 } from "@/lib/react-query/category-hierarchy-query";
+import { useGetAllComponents } from "@/lib/react-query/price-component-query";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -23,8 +24,18 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Plus, ArrowLeft, ChevronRight, Trash2, Circle, CheckCircle2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Plus, ArrowLeft, ChevronRight, Trash2, Circle, CheckCircle2, Calculator } from "lucide-react";
 import FormProvider from "@/components/form/FormProvider";
+import { FormulaBuilder } from "@/components/formula-builder";
 
 // Validation schema
 const subcategorySchema = z.object({
@@ -41,19 +52,30 @@ const subcategorySchema = z.object({
 
 type SubcategoryFormData = z.infer<typeof subcategorySchema>;
 
-// Default pricing components (keys must match PriceComponent.key in database)
-const DEFAULT_PRICING_COMPONENTS = [
-  { componentKey: "metal_cost", componentName: "Metal Cost", calculationType: "PER_GRAM", value: 1 },
-  { componentKey: "making_charges", componentName: "Making Charges", calculationType: "PERCENTAGE", value: 15 },
-  // Change: Wastage default to PERCENTAGE 5% (simpler UX). Advanced: allow switching to FORMULA.
-  { componentKey: "wastage_charges", componentName: "Wastage Charges", calculationType: "PERCENTAGE", value: 5 },
-  { componentKey: "gst", componentName: "GST", calculationType: "PERCENTAGE", value: 3 },
-];
+// Default system component keys (must exist in PriceComponent collection)
+const DEFAULT_SYSTEM_COMPONENT_KEYS = ["metal_cost", "making_charges", "wastage_charges", "gst"];
+
+interface PricingComponentLocal {
+  componentId: string;
+  componentKey: string;
+  componentName: string;
+  calculationType: string;
+  value: number;
+  formula?: string | null;
+  percentageOf?: string;
+  isActive?: boolean;
+  isVisible?: boolean;
+  sortOrder?: number;
+  _prevCalculationType?: string;
+  _prevValue?: number;
+}
 
 const AddSubcategoryPage = () => {
   const { categoryId, subId } = useParams<{ categoryId: string; subId?: string }>();
   const navigate = useNavigate();
-  const [pricingComponents, setPricingComponents] = useState(DEFAULT_PRICING_COMPONENTS);
+  const [pricingComponents, setPricingComponents] = useState<PricingComponentLocal[]>([]);
+  const [showAddComponentDialog, setShowAddComponentDialog] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Determine if adding to category or nested subcategory
   const isNestedView = Boolean(subId);
@@ -61,6 +83,44 @@ const AddSubcategoryPage = () => {
   // Fetch parent data
   const { data: categoryData, isLoading: categoryLoading } = useGetCategory(categoryId || "");
   const { data: parentSubcategoryData, isLoading: parentSubcategoryLoading } = useGetSubcategory(subId || "");
+
+  // Fetch all available price components
+  const { data: allComponentsData, isLoading: isLoadingComponents } = useGetAllComponents({ includeInactive: false });
+  const allComponents = allComponentsData?.components || [];
+
+  // Initialize default pricing components from API data
+  useMemo(() => {
+    if (allComponents.length > 0 && !isInitialized) {
+      const defaultComponents: PricingComponentLocal[] = [];
+      for (const key of DEFAULT_SYSTEM_COMPONENT_KEYS) {
+        const comp = allComponents.find((c: any) => c.key === key);
+        if (comp) {
+          defaultComponents.push({
+            componentId: comp._id,
+            componentKey: comp.key,
+            componentName: comp.name,
+            calculationType: comp.calculationType,
+            value: comp.defaultValue || 0,
+            formula: comp.formula || null,
+            percentageOf: comp.percentageOf || "metalCost",
+            isActive: comp.isActive !== false,
+            isVisible: comp.isVisible !== false,
+            sortOrder: defaultComponents.length,
+          });
+        }
+      }
+      if (defaultComponents.length > 0) {
+        setPricingComponents(defaultComponents);
+        setIsInitialized(true);
+      }
+    }
+  }, [allComponents, isInitialized]);
+
+  // Get available components that haven't been added yet
+  const availableComponentsToAdd = useMemo(() => {
+    const existingKeys = new Set(pricingComponents.map(c => c.componentKey));
+    return allComponents.filter((c: any) => !existingKeys.has(c.key));
+  }, [allComponents, pricingComponents]);
 
   // Mutation
   const { mutate: createSubcategory, isPending: isCreating } = useCreateSubcategory();
@@ -183,17 +243,28 @@ const AddSubcategoryPage = () => {
     setPricingComponents(updated);
   };
 
-  // Add new pricing component
-  const addPricingComponent = () => {
-    setPricingComponents([
-      ...pricingComponents,
-      {
-        componentKey: `custom_${Date.now()}`,
-        componentName: "New Component",
-        calculationType: "PERCENTAGE",
-        value: 0,
-      },
-    ]);
+  // Add component from available list
+  const handleAddComponent = (component: any) => {
+    const maxSortOrder = pricingComponents.length > 0
+      ? Math.max(...pricingComponents.map(c => c.sortOrder || 0))
+      : -1;
+
+    const newComponent: PricingComponentLocal = {
+      componentId: component._id,
+      componentKey: component.key,
+      componentName: component.name,
+      calculationType: component.calculationType || "FIXED",
+      value: component.defaultValue || 0,
+      formula: component.formula || null,
+      percentageOf: component.percentageOf || "metalCost",
+      isActive: component.isActive !== false,
+      isVisible: component.isVisible !== false,
+      sortOrder: maxSortOrder + 1,
+    };
+
+    setPricingComponents([...pricingComponents, newComponent]);
+    setShowAddComponentDialog(false);
+    toast.success(`Added "${component.name}" component`);
   };
 
   // Toggle Advanced (switch between PERCENTAGE/FIXED/PER_GRAM and FORMULA)
@@ -384,21 +455,33 @@ const AddSubcategoryPage = () => {
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">Pricing Components</CardTitle>
-                      <Button type="button" variant="outline" size="sm" onClick={addPricingComponent}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddComponentDialog(true)}
+                        disabled={availableComponentsToAdd.length === 0 || isLoadingComponents}
+                      >
                         <Plus className="h-3 w-3 mr-1" /> Add Component
                       </Button>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {pricingComponents.map((comp, index) => (
-                      <div key={index} className="flex flex-col gap-2 p-3 bg-white rounded-lg border">
+                    {isLoadingComponents ? (
+                      <div className="text-center py-4 text-gray-500">Loading components...</div>
+                    ) : pricingComponents.length === 0 ? (
+                      <div className="text-center py-4 text-gray-500">
+                        <Calculator className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                        <p>No components configured. Click "Add Component" to start.</p>
+                      </div>
+                    ) : (
+                    pricingComponents.map((comp, index) => (
+                      <div key={comp.componentKey} className="flex flex-col gap-2 p-3 bg-white rounded-lg border">
                         <div className="flex items-center gap-3">
-                          <Input
-                            className="flex-1"
-                            value={comp.componentName}
-                            onChange={(e) => updateComponentValue(index, "componentName", e.target.value)}
-                            placeholder="Component name"
-                          />
+                          <div className="flex-1">
+                            <span className="font-medium">{comp.componentName}</span>
+                            <span className="text-xs text-gray-500 ml-2">({comp.componentKey})</span>
+                          </div>
 
                           <div className="flex items-center gap-2">
                             <select
@@ -435,16 +518,21 @@ const AddSubcategoryPage = () => {
                         </div>
 
                         {comp.calculationType === "FORMULA" ? (
-                          <div className="space-y-2">
-                            <Textarea
-                              value={comp.formula || ""}
-                              onChange={(e) => updateComponentValue(index, "formula", e.target.value)}
-                              placeholder="e.g., (grossWeight - netWeight) * metalRate * 0.05"
-                              className="font-mono text-sm"
-                              rows={3}
-                            />
-                            <p className="text-xs text-gray-500">Advanced formula mode — use variables like grossWeight, netWeight, metalRate, subtotal</p>
-                          </div>
+                          <FormulaBuilder
+                            value={comp.formula || ""}
+                            formulaChips={comp.formulaChips || []}
+                            onChange={(formula, chips) => {
+                              updateComponentValue(index, "formula", formula);
+                              updateComponentValue(index, "formulaChips", chips);
+                            }}
+                            testValues={{
+                              grossWeight: 10,
+                              netWeight: 9.5,
+                              metalRate: 5000,
+                              metalCost: 47500,
+                              subtotal: 50000,
+                            }}
+                          />
                         ) : (
                           <div className="flex items-center gap-2">
                             <Input
@@ -460,7 +548,8 @@ const AddSubcategoryPage = () => {
                           </div>
                         )}
                       </div>
-                    ))}
+                    ))
+                    )}
                   </CardContent>
                 </Card>
               )}
@@ -480,13 +569,72 @@ const AddSubcategoryPage = () => {
               <Button type="button" variant="outline" onClick={() => navigate(backUrl)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isCreating || isLoading || (idAttribute && availabilityQuery.isSuccess && isIdAvailable === false)}>
+              <Button type="submit" disabled={Boolean(isCreating || isLoading || (idAttribute && availabilityQuery.isSuccess && isIdAvailable === false))}>
                 {isCreating ? "Creating..." : "Save Subcategory"}
               </Button>
             </div>
           </FormProvider>
         </CardContent>
       </Card>
+
+      {/* Add Component Dialog */}
+      <Dialog open={showAddComponentDialog} onOpenChange={setShowAddComponentDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add Pricing Component</DialogTitle>
+            <DialogDescription>
+              Select a component to add to your pricing configuration.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 max-h-[400px] overflow-auto">
+            {availableComponentsToAdd.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                <Calculator className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>All available components have been added.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {availableComponentsToAdd.map((component: any) => (
+                  <div
+                    key={component._id || component.key}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium">{component.name}</p>
+                      <p className="text-xs text-gray-500">{component.key}</p>
+                      {component.description && (
+                        <p className="text-sm text-gray-600 mt-1">{component.description}</p>
+                      )}
+                      <div className="flex gap-2 mt-1">
+                        <Badge variant="outline" className="text-xs">
+                          {component.calculationType}
+                        </Badge>
+                        {component.defaultValue !== undefined && component.calculationType !== "FORMULA" && (
+                          <Badge variant="secondary" className="text-xs">
+                            Default: {component.calculationType === "PERCENTAGE" ? `${component.defaultValue}%` : `₹${component.defaultValue}`}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddComponent(component)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddComponentDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

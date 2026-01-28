@@ -74,10 +74,12 @@ import {
   EyeOff,
 } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip";
+import { FormulaBuilder } from "@/components/formula-builder";
 import {
   useGetCalculationTypes,
   useGetFormulaVariables,
   useValidateFormula,
+  useGetAllComponents,
 } from "@/lib/react-query/price-component-query";
 import { PricingComponent } from "@/lib/axios/category-hierarchy-API";
 
@@ -101,6 +103,8 @@ const SubcategoryListPage = () => {
   // Pricing configuration state
   const [pricingFormData, setPricingFormData] = useState<PricingComponent[]>([]);
   const [showFreezeDialog, setShowFreezeDialog] = useState(false);
+  const [showAddComponentDialog, setShowAddComponentDialog] = useState(false);
+  const [showInheritanceWarning, setShowInheritanceWarning] = useState(false);
   const [freezeComponent, setFreezeComponent] = useState<string>("");
   const [freezeReason, setFreezeReason] = useState("");
   const [formulaError, setFormulaError] = useState<string | null>(null);
@@ -141,6 +145,16 @@ const SubcategoryListPage = () => {
   );
   const { data: calculationTypesData } = useGetCalculationTypes();
   const { data: formulaVariablesData } = useGetFormulaVariables();
+  const { data: allComponentsData, isLoading: isLoadingAllComponents, error: allComponentsError } = useGetAllComponents({ includeInactive: true });
+
+  // Debug: log allComponentsData to see what's being returned
+  React.useEffect(() => {
+    if (allComponentsError) {
+      console.error("Error loading price components:", allComponentsError);
+    }
+    console.log("allComponentsData:", allComponentsData);
+    console.log("allComponents array:", allComponentsData?.components);
+  }, [allComponentsData, allComponentsError]);
 
   const { mutate: updatePricing, isPending: isUpdatingPricing } = useUpdateSubcategoryPricing();
   const { mutate: createDefaultPricing, isPending: isCreatingDefaultPricing } = useCreateDefaultSubcategoryPricing();
@@ -153,8 +167,9 @@ const SubcategoryListPage = () => {
 
 
   // Update pricing form data when pricing data loads
+  // API returns: { pricingConfig: {...}, pricingSource: {...}, hasOwnConfig: boolean }
   React.useEffect(() => {
-    const components = pricingData?.data?.pricingConfig?.components || pricingData?.pricingConfig?.components;
+    const components = pricingData?.pricingConfig?.components;
     if (components && showPricingDialog) {
       setPricingFormData([...components]);
       const snap = JSON.stringify(components);
@@ -255,9 +270,17 @@ const SubcategoryListPage = () => {
   const calculationTypes = calculationTypesData?.data?.types || [];
   const formulaVariables = formulaVariablesData?.data?.variables || [];
   const operators = formulaVariablesData?.data?.operators || ["+", "-", "×", "÷", "(", ")"];
+  const allComponents = allComponentsData?.components || [];
 
-  const pricingSource = pricingData?.data?.pricingSource || pricingData?.pricingSource || null;
-  const hasCustomPricing = selectedSubcategory?.hasPricingConfig || false;
+  // Filter out components that are already in pricingFormData
+  const availableComponentsToAdd = useMemo(() => {
+    const existingKeys = new Set(pricingFormData.map(c => c.componentKey));
+    return allComponents.filter((c: any) => !existingKeys.has(c.key));
+  }, [allComponents, pricingFormData]);
+
+  const pricingSource = pricingData?.pricingSource || null;
+  // Use API response for accurate state (hasOwnConfig), fallback to subcategory document
+  const hasCustomPricing = pricingData?.hasOwnConfig ?? selectedSubcategory?.hasPricingConfig ?? false;
 
   // Build breadcrumb
   const breadcrumb = useMemo(() => {
@@ -286,32 +309,46 @@ const SubcategoryListPage = () => {
   };
 
   // Open pricing dialog
+  // Note: pricingFormData is populated by the useEffect when pricingData loads
   const handlePricingClick = (subcategory: any) => {
     setSelectedSubcategory(subcategory);
-    // Initialize with current pricing config or empty array
-    const currentConfig = pricingData?.data?.pricingConfig?.components || pricingData?.pricingConfig?.components || [];
-
-    // Normalize legacy Wastage formula to a percentage for simpler UX when it matches the old default
-    const normalized = currentConfig.map((c: any) => {
-      if (c.componentKey === "wastage_charges" && c.calculationType === "FORMULA") {
-        const formula = (c.formula || "").toString();
-        // If formula looks like the legacy wastage formula, show Percentage 5% in the UI by default
-        if (/grossWeight.*netWeight.*metalRate/i.test(formula)) {
-          return {
-            ...c,
-            _legacyFormula: formula,
-            calculationType: "PERCENTAGE",
-            value: c.value ?? 5,
-            formula: null,
-          };
-        }
-      }
-      return c;
-    });
-
-    setPricingFormData([...normalized]);
+    // Clear current form data - will be populated by useEffect when pricingData loads
+    setPricingFormData([]);
+    setOriginalPricingSnapshot(null);
+    setHasUnsavedChanges(false);
     setShowPricingDialog(true);
   };
+
+  // Normalize legacy formulas when components load
+  React.useEffect(() => {
+    if (!pricingFormData.length) return;
+
+    // Check if any wastage_charges needs normalization
+    const needsNormalization = pricingFormData.some((c: any) =>
+      c.componentKey === "wastage_charges" &&
+      c.calculationType === "FORMULA" &&
+      /grossWeight.*netWeight.*metalRate/i.test(c.formula || "")
+    );
+
+    if (needsNormalization) {
+      const normalized = pricingFormData.map((c: any) => {
+        if (c.componentKey === "wastage_charges" && c.calculationType === "FORMULA") {
+          const formula = (c.formula || "").toString();
+          if (/grossWeight.*netWeight.*metalRate/i.test(formula)) {
+            return {
+              ...c,
+              _legacyFormula: formula,
+              calculationType: "PERCENTAGE",
+              value: c.value ?? 5,
+              formula: null,
+            };
+          }
+        }
+        return c;
+      });
+      setPricingFormData(normalized);
+    }
+  }, [pricingFormData.length]); // Only run when components first load
 
   // Pricing configuration handlers
   const handlePricingComponentChange = (componentKey: string, field: string, value: any) => {
@@ -335,6 +372,47 @@ const SubcategoryListPage = () => {
     if (field === "isVisible") {
       toast.info("Component visibility changed locally — remember to Save Configuration");
     }
+  };
+
+  // Handler to add a new component to pricingFormData
+  const handleAddComponentToPricing = (component: any) => {
+    // Calculate next sortOrder
+    const maxSortOrder = pricingFormData.length > 0
+      ? Math.max(...pricingFormData.map(c => c.sortOrder || 0))
+      : -1;
+
+    const newComponent: PricingComponent = {
+      componentId: component._id, // Required by backend
+      componentKey: component.key,
+      componentName: component.name,
+      calculationType: component.calculationType || "FIXED",
+      value: component.defaultValue || 0,
+      formula: component.formula || null,
+      percentageOf: component.percentageOf || "metalCost",
+      isFrozen: false,
+      isActive: component.isActive !== false,
+      isVisible: component.isVisible !== false,
+      sortOrder: maxSortOrder + 1,
+    };
+
+    setPricingFormData(prev => {
+      const updated = [...prev, newComponent];
+      setHasUnsavedChanges(true);
+      return updated;
+    });
+
+    setShowAddComponentDialog(false);
+    toast.success(`Added "${component.name}" component`);
+  };
+
+  // Handler to remove a component from pricingFormData
+  const handleRemoveComponentFromPricing = (componentKey: string) => {
+    setPricingFormData(prev => {
+      const updated = prev.filter(c => c.componentKey !== componentKey);
+      setHasUnsavedChanges(true);
+      return updated;
+    });
+    toast.info("Component removed — remember to Save Configuration");
   };
 
   const handleFreezeComponent = (componentKey: string) => {
@@ -424,7 +502,22 @@ const SubcategoryListPage = () => {
     });
   };
 
+  // Check if user is about to break inheritance and show warning
   const handleSavePricing = () => {
+    if (!selectedSubcategory) return;
+
+    // If subcategory doesn't have custom pricing, show warning first
+    if (!hasCustomPricing) {
+      setShowInheritanceWarning(true);
+      return;
+    }
+
+    // Otherwise save directly
+    doSavePricing();
+  };
+
+  // Actual save logic
+  const doSavePricing = () => {
     if (!selectedSubcategory) return;
 
     // Sanitize components: remove any internal temporary keys
@@ -432,6 +525,7 @@ const SubcategoryListPage = () => {
       const rest = { ...c };
       delete rest._prevCalculationType;
       delete rest._prevValue;
+      delete rest._legacyFormula;
       // ensure numeric values exist and formula is null when not used
       return {
         ...rest,
@@ -453,10 +547,19 @@ const SubcategoryListPage = () => {
           setOriginalPricingSnapshot(null);
         }
         setHasUnsavedChanges(false);
+        setShowInheritanceWarning(false);
+        // Update the local state to reflect that subcategory now has custom pricing
+        if (selectedSubcategory) {
+          setSelectedSubcategory({ ...selectedSubcategory, hasPricingConfig: true });
+        }
         refetchPricing();
       },
-      onError: (error) => {
-        toast.error("Failed to update pricing configuration");
+      onError: (error: any) => {
+        const errorMsg = error?.response?.data?.error?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
+          "Failed to update pricing configuration";
+        toast.error(errorMsg);
         console.error(error);
       }
     });
@@ -939,6 +1042,22 @@ const SubcategoryListPage = () => {
               </div>
             </div>
 
+            {/* Pricing Components Header with Add Button */}
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium">Pricing Components</h4>
+              {hasCustomPricing && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowAddComponentDialog(true)}
+                  disabled={isLoadingAllComponents || availableComponentsToAdd.length === 0}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  {isLoadingAllComponents ? "Loading..." : "Add Component"}
+                </Button>
+              )}
+            </div>
+
             {/* Pricing Components Table */}
             <div className="flex-1 overflow-auto border rounded-lg">
               {isLoadingPricing ? (
@@ -954,12 +1073,22 @@ const SubcategoryListPage = () => {
                 <div className="p-8 text-center text-gray-500">
                   <Calculator className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p className="text-lg font-medium mb-2">No Pricing Components</p>
-                  <p className="text-sm">
+                  <p className="text-sm mb-4">
                     {hasCustomPricing
                       ? "Add pricing components to define how this subcategory calculates prices"
                       : "This subcategory inherits pricing from its parent"
                     }
                   </p>
+                  {hasCustomPricing && (
+                    <Button
+                      size="sm"
+                      onClick={() => setShowAddComponentDialog(true)}
+                      disabled={isLoadingAllComponents || availableComponentsToAdd.length === 0}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      {isLoadingAllComponents ? "Loading components..." : "Add Component"}
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <Table>
@@ -1013,20 +1142,27 @@ const SubcategoryListPage = () => {
                         </TableCell>
                         <TableCell>
                           {component.calculationType === "FORMULA" ? (
-                            <div className="space-y-2">
-                              <Textarea
-                                value={component.formula || ""}
-                                onChange={(e) => {
-                                  handlePricingComponentChange(component.componentKey, "formula", e.target.value);
-                                  handleValidateFormula(e.target.value);
-                                }}
-                                placeholder="e.g., grossWeight * 0.05"
-                                className="font-mono text-sm min-h-[60px]"
-                              />
-                              {formulaError && (
-                                <p className="text-xs text-red-500">{formulaError}</p>
-                              )}
-                            </div>
+                            <FormulaBuilder
+                              value={component.formula || ""}
+                              formulaChips={component.formulaChips || []}
+                              onChange={(formula, chips) => {
+                                handlePricingComponentChange(component.componentKey, "formula", formula);
+                                handlePricingComponentChange(component.componentKey, "formulaChips", chips);
+                                handleValidateFormula(formula);
+                              }}
+                              validationResult={
+                                formulaError
+                                  ? { valid: false, errors: [formulaError], warnings: [] }
+                                  : { valid: true, errors: [], warnings: [] }
+                              }
+                              testValues={{
+                                grossWeight: previewValues.grossWeight,
+                                netWeight: previewValues.netWeight,
+                                metalRate: previewValues.metalRate,
+                                metalCost: previewValues.metalCost,
+                                subtotal: 0,
+                              }}
+                            />
                           ) : (
                             <Input
                               type="number"
@@ -1119,6 +1255,18 @@ const SubcategoryListPage = () => {
                                   }
                                 />
                               </div>
+                            </Tooltip>
+
+                            <Tooltip content="Remove component from pricing">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleRemoveComponentFromPricing(component.componentKey)}
+                                className="text-destructive hover:text-destructive"
+                                aria-label={`Remove ${component.componentName || component.componentKey}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </Tooltip>
                           </div>
                         </TableCell>
@@ -1326,6 +1474,119 @@ const SubcategoryListPage = () => {
               disabled={!freezeReason.trim() || isFreezing}
             >
               {isFreezing ? "Freezing..." : "Freeze Component"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Component Dialog */}
+      <Dialog open={showAddComponentDialog} onOpenChange={setShowAddComponentDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add Pricing Component</DialogTitle>
+            <DialogDescription>
+              Select a component to add to this subcategory's pricing configuration.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 max-h-[400px] overflow-auto">
+            {isLoadingAllComponents ? (
+              <div className="text-center text-gray-500 py-8">
+                <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
+                <p>Loading available components...</p>
+              </div>
+            ) : allComponentsError ? (
+              <div className="text-center text-red-500 py-8">
+                <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-300" />
+                <p>Failed to load components.</p>
+                <p className="text-sm mt-2">Please check the console for details.</p>
+              </div>
+            ) : availableComponentsToAdd.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                <Calculator className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>All available components have been added.</p>
+                <p className="text-xs mt-2 text-gray-400">
+                  Total components in system: {allComponents.length}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {availableComponentsToAdd.map((component: any) => (
+                  <div
+                    key={component._id || component.key}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium">{component.name}</p>
+                      <p className="text-xs text-gray-500">{component.key}</p>
+                      {component.description && (
+                        <p className="text-sm text-gray-600 mt-1">{component.description}</p>
+                      )}
+                      <div className="flex gap-2 mt-1">
+                        <Badge variant="outline" className="text-xs">
+                          {component.calculationType}
+                        </Badge>
+                        {component.defaultValue !== undefined && component.calculationType !== "FORMULA" && (
+                          <Badge variant="secondary" className="text-xs">
+                            Default: {component.calculationType === "PERCENTAGE" ? `${component.defaultValue}%` : `₹${component.defaultValue}`}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddComponentToPricing(component)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddComponentDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Inheritance Warning Dialog */}
+      <Dialog open={showInheritanceWarning} onOpenChange={setShowInheritanceWarning}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertCircle className="h-5 w-5" />
+              Create Custom Pricing?
+            </DialogTitle>
+            <DialogDescription>
+              This subcategory currently inherits its pricing from{" "}
+              <strong>{pricingSource?.subcategoryName || "a parent category"}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Alert className="border-amber-200 bg-amber-50">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertTitle className="text-amber-800">Warning</AlertTitle>
+              <AlertDescription className="text-amber-700">
+                Saving these changes will create a custom pricing configuration for this subcategory.
+                It will no longer automatically update when the parent's pricing changes.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowInheritanceWarning(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setShowInheritanceWarning(false);
+                doSavePricing();
+              }}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              Create Custom Pricing
             </Button>
           </DialogFooter>
         </DialogContent>

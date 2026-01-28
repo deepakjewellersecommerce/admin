@@ -42,6 +42,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FormulaBuilder } from "@/components/formula-builder";
 import {
   Plus,
   Edit,
@@ -449,34 +450,28 @@ const PriceComponentsPage = () => {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="formula">Formula *</Label>
-                  <Textarea
-                    id="formula"
+                  <FormulaBuilder
                     value={formData.formula || ""}
-                    onChange={(e) => {
-                      setFormData({ ...formData, formula: e.target.value });
+                    formulaChips={formData.formulaChips || []}
+                    onChange={(formula, chips) => {
+                      setFormData({ ...formData, formula, formulaChips: chips });
                       setFormulaError(null);
                     }}
-                    placeholder="e.g., grossWeight * 50 + netWeight * metalRate * 0.1"
-                    className="font-mono"
+                    validationResult={
+                      formulaError
+                        ? { valid: false, errors: [formulaError], warnings: [] }
+                        : formData.formula
+                        ? { valid: true, errors: [], warnings: [] }
+                        : null
+                    }
+                    testValues={{
+                      grossWeight: 10,
+                      netWeight: 9.5,
+                      metalRate: 5000,
+                      metalCost: 47500,
+                      subtotal: 50000,
+                    }}
                   />
-                  <div className="flex justify-between items-center">
-                    {formulaError ? (
-                      <p className="text-xs text-destructive">{formulaError}</p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        Use variables and operators below
-                      </p>
-                    )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleValidateFormula}
-                      disabled={isValidating || !formData.formula}
-                    >
-                      {isValidating ? "Validating..." : "Validate"}
-                    </Button>
-                  </div>
                 </div>
 
                 <div className="space-y-2">
