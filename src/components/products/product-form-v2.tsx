@@ -188,7 +188,6 @@ const ProductFormV2 = () => {
       value: c._id,
     }));
   }, [categoriesData]);
->>>>>>> Stashed changes
 
   // Build flat subcategory options for single dropdown
   const subcategoryOptions = useMemo(() => {
