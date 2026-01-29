@@ -41,8 +41,18 @@ const subcategorySchema = z.object({
 
 type SubcategoryFormData = z.infer<typeof subcategorySchema>;
 
+interface PricingComponent {
+  componentKey: string;
+  componentName: string;
+  calculationType: string;
+  value: number;
+  formula?: string;
+  _prevCalculationType?: string;
+  _prevValue?: number;
+}
+
 // Default pricing components (keys must match PriceComponent.key in database)
-const DEFAULT_PRICING_COMPONENTS = [
+const DEFAULT_PRICING_COMPONENTS: PricingComponent[] = [
   { componentKey: "metal_cost", componentName: "Metal Cost", calculationType: "PER_GRAM", value: 1 },
   { componentKey: "making_charges", componentName: "Making Charges", calculationType: "PERCENTAGE", value: 15 },
   // Change: Wastage default to PERCENTAGE 5% (simpler UX). Advanced: allow switching to FORMULA.
@@ -53,7 +63,7 @@ const DEFAULT_PRICING_COMPONENTS = [
 const AddSubcategoryPage = () => {
   const { categoryId, subId } = useParams<{ categoryId: string; subId?: string }>();
   const navigate = useNavigate();
-  const [pricingComponents, setPricingComponents] = useState(DEFAULT_PRICING_COMPONENTS);
+  const [pricingComponents, setPricingComponents] = useState<PricingComponent[]>(DEFAULT_PRICING_COMPONENTS);
 
   // Determine if adding to category or nested subcategory
   const isNestedView = Boolean(subId);
@@ -480,7 +490,7 @@ const AddSubcategoryPage = () => {
               <Button type="button" variant="outline" onClick={() => navigate(backUrl)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isCreating || isLoading || !!(idAttribute && availabilityQuery.isSuccess && isIdAvailable === false)}>
+              <Button type="submit" disabled={isCreating || isLoading || Boolean(idAttribute && availabilityQuery.isSuccess && isIdAvailable === false)}>
                 {isCreating ? "Creating..." : "Save Subcategory"}
               </Button>
             </div>
