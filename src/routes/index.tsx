@@ -49,6 +49,7 @@ import {
   SubcategoryListPage,
   AddCategoryPage,
   AddSubcategoryPage,
+  CategoryHierarchyPage,
 } from "./elements";
 import ProductRatingList from "@/components/product-rating/product-rating-list";
 import UpdateRatingForm from "@/components/review/update-review-form";
@@ -297,6 +298,10 @@ export default function Router() {
         {
           path: "catalog/categories",
           element: <CategoryManagementPage />,
+        },
+        {
+          path: "catalog/hierarchy",
+          element: <CategoryHierarchyPage />,
         },
         {
           path: "catalog/categories/add",

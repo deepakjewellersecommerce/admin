@@ -6,6 +6,7 @@ import FormImageInput from "../form/FormImage";
 import FormInput from "../form/FormInput";
 import FormTextArea from "../form/FormTextArea";
 import { useAddProduct } from "@/lib/react-query/product-query";
+import { useGetPricePreview } from "@/lib/react-query/product-pricing-query";
 import FormProvider from "../form/FormProvider";
 import { useMemo, useEffect, useState } from "react";
 import FormSwitch from "../form/form-switch";
@@ -155,39 +156,6 @@ const ProductFormV2 = () => {
 
   const { mutate: addProduct, isPending } = useAddProduct();
   const { isPending: isPreviewLoading } = useGetPricePreview();
-
-  // Build options
-  const materialOptions = useMemo(() => {
-    const materials = materialsData?.data?.materials || [];
-    return materials.map((m: any) => ({
-      label: `${m.name} (${m.metalType})`,
-      value: m._id,
-    }));
-  }, [materialsData]);
-
-  const genderOptions = useMemo(() => {
-    const genders = gendersData?.data?.genders || [];
-    return genders.map((g: any) => ({
-      label: g.name,
-      value: g._id,
-    }));
-  }, [gendersData]);
-
-  const itemOptions = useMemo(() => {
-    const items = itemsData?.data?.items || [];
-    return items.map((i: any) => ({
-      label: i.name,
-      value: i._id,
-    }));
-  }, [itemsData]);
-
-  const categoryOptions = useMemo(() => {
-    const categories = categoriesData?.data?.categories || [];
-    return categories.map((c: any) => ({
-      label: c.name,
-      value: c._id,
-    }));
-  }, [categoriesData]);
 
   // Build flat subcategory options for single dropdown
   const subcategoryOptions = useMemo(() => {

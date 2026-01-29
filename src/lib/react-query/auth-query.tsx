@@ -12,6 +12,16 @@ export const useAuthLogin = () => {
     mutationFn: async (payload: unknown) => {
       console.log('%c🚀 useAuthLogin: Starting login process', 'background: #2563eb; color: white; padding: 2px 4px; border-radius: 4px;');
       console.log('Login payload:', payload);
+      
+      // Clear any existing tokens before login attempt
+      try {
+        const { clearAuthToken } = await import('@/lib/utils/auth');
+        clearAuthToken();
+        console.log('%c🧹 Cleared existing auth tokens', 'color: #f59e0b');
+      } catch (e) {
+        console.warn('Could not clear existing tokens:', e);
+      }
+      
       const response = await authAPI.loginUser(payload);
   console.log('%c✅ useAuthLogin: Login API call successful', 'background: #059669; color: white; padding: 2px 4px; border-radius: 4px;');
   console.log('Login response:', response);
@@ -156,7 +166,16 @@ export const useLogout = () => {
   const navigate = useNavigate();
   return useMutation({
     mutationFn: authAPI.logoutUser,
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Clear local storage token
+      try {
+        const { clearAuthToken } = await import('@/lib/utils/auth');
+        clearAuthToken();
+        console.log('%c🧹 Cleared auth token on logout', 'color: #f59e0b');
+      } catch (e) {
+        console.warn('Could not clear token on logout:', e);
+      }
+      
       toast.success("Logged out successfully");
       navigate("/auth/login");
     },
