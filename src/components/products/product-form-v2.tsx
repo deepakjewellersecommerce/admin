@@ -9,18 +9,14 @@ import { useAddProduct } from "@/lib/react-query/product-query";
 import FormProvider from "../form/FormProvider";
 import { useMemo, useEffect, useState } from "react";
 import FormSwitch from "../form/form-switch";
-import { useGetBrandOptions } from "@/lib/react-query/brand-query";
 import FormGroupSelect from "../form/FormCombobox";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  useGetAllMaterials as useGetMaterials,
-  useGetAllGenders as useGetGenders,
-  useGetAllItems as useGetItems,
-  useGetAllCategories as useGetCategoriesV2,
-  useGetAllSubcategories as useGetSubcategories,
+  useGetAllSubcategoriesFlat,
 } from "@/lib/react-query/category-hierarchy-query";
-import { useGetPricePreview } from "@/lib/react-query/product-pricing-query";
+import type { SubcategoryFlat } from "@/lib/axios/category-hierarchy-API";
+
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { AlertCircle, Plus, Trash2, Calculator, Info } from "lucide-react";
@@ -89,7 +85,6 @@ const productSchema = z.object({
   staticPrice: z.number().optional(),
 
   // Other fields
-  brand: z.string().optional(),
   isActive: z.boolean().optional(),
   isFeatured: z.boolean().optional(),
   productImageUrl: z.string().optional(),
@@ -127,7 +122,6 @@ const defaultValues: ProductFormData = {
   gemstones: [],
   pricingMode: "SUBCATEGORY_DYNAMIC",
   staticPrice: undefined,
-  brand: "",
   isActive: true,
   isFeatured: false,
   productImageUrl: "",
@@ -150,32 +144,15 @@ const ProductFormV2 = () => {
     name: "gemstones",
   });
 
-  // Watch hierarchy selections
-  const materialId = form.watch("materialId");
-  const genderId = form.watch("genderId");
-  const itemId = form.watch("itemId");
-  const categoryId = form.watch("categoryId");
+  // Watch form values
   const subcategoryId = form.watch("subcategoryId");
   const grossWeight = form.watch("grossWeight");
   const netWeight = form.watch("netWeight");
   const pricingMode = form.watch("pricingMode");
 
-  // Fetch hierarchy data
-  const { data: materialsData } = useGetMaterials();
-  const { data: gendersData } = useGetGenders({ includeInactive: true });
-  const { data: itemsData } = useGetItems({ includeInactive: true });
-  const { data: categoriesData } = useGetCategoriesV2({
-    materialId,
-    genderId,
-    itemId,
-    includeInactive: true,
-  });
-  const { data: subcategoriesData } = useGetSubcategories({
-    categoryId,
-    includeInactive: true,
-  });
+  // Fetch flat subcategories for single dropdown
+  const { data: subcategoriesData } = useGetAllSubcategoriesFlat();
 
-  const { options: brandOptions } = useGetBrandOptions();
   const { mutate: addProduct, isPending } = useAddProduct();
   const { isPending: isPreviewLoading } = useGetPricePreview();
 
@@ -212,50 +189,30 @@ const ProductFormV2 = () => {
     }));
   }, [categoriesData]);
 
+  // Build flat subcategory options for single dropdown
   const subcategoryOptions = useMemo(() => {
-    const subs = subcategoriesData?.data?.subcategories || [];
-    return subs.map((s: any) => ({
-      label: s.name,
+    const subs: SubcategoryFlat[] = subcategoriesData?.data?.subcategories || [];
+    return subs.map((s) => ({
+      label: s.displayLabel,
       value: s._id,
     }));
   }, [subcategoriesData]);
 
-  // Get selected material for metal type display
-  const selectedMaterial = useMemo(() => {
-    if (!materialsData?.data || !materialId) return null;
-    return materialsData.data.find((m: any) => m._id === materialId);
-  }, [materialsData, materialId]);
+  // Get selected subcategory details for display and auto-populating hierarchy
+  const selectedSubcategory = useMemo((): SubcategoryFlat | null => {
+    if (!subcategoriesData?.data?.subcategories || !subcategoryId) return null;
+    return subcategoriesData.data.subcategories.find((s: SubcategoryFlat) => s._id === subcategoryId) || null;
+  }, [subcategoriesData, subcategoryId]);
 
-  // Reset dependent fields when parent changes
+  // Auto-populate hierarchy fields when subcategory is selected
   useEffect(() => {
-    if (materialId) {
-      form.setValue("genderId", "");
-      form.setValue("itemId", "");
-      form.setValue("categoryId", "");
-      form.setValue("subcategoryId", "");
+    if (selectedSubcategory) {
+      form.setValue("materialId", selectedSubcategory.materialId || "");
+      form.setValue("genderId", selectedSubcategory.genderId || "");
+      form.setValue("itemId", selectedSubcategory.itemId || "");
+      form.setValue("categoryId", selectedSubcategory.categoryId || "");
     }
-  }, [materialId]);
-
-  useEffect(() => {
-    if (genderId) {
-      form.setValue("itemId", "");
-      form.setValue("categoryId", "");
-      form.setValue("subcategoryId", "");
-    }
-  }, [genderId]);
-
-  useEffect(() => {
-    if (itemId) {
-      form.setValue("categoryId", "");
-      form.setValue("subcategoryId", "");
-    }
-  }, [itemId]);
-
-  useEffect(() => {
-    if (categoryId) {
-      form.setValue("subcategoryId", "");
-    }
-  }, [categoryId]);
+  }, [selectedSubcategory, form]);
 
   // Auto-generate slug
   useEffect(() => {
@@ -313,12 +270,17 @@ const ProductFormV2 = () => {
         productDescription: data.productDescription || "",
         careHandling: data.careHandling || "",
         subcategoryId: data.subcategoryId,
+        // Include hierarchy fields from selected subcategory
+        materialId: data.materialId,
+        genderId: data.genderId,
+        itemId: data.itemId,
+        categoryId: data.categoryId,
+        metalType: selectedSubcategory?.material?.metalType || "",
         grossWeight: data.grossWeight,
         netWeight: data.netWeight,
         gemstones: data.gemstones || [],
         pricingMode: data.pricingMode,
         staticPrice: data.pricingMode === "STATIC_PRICE" ? data.staticPrice : undefined,
-        brand: data.brand || undefined,
         isActive: data.isActive ?? true,
         isFeatured: data.isFeatured ?? false,
         seoTitle: data.seoTitle || "",
@@ -395,62 +357,38 @@ const ProductFormV2 = () => {
               </CardContent>
             </Card>
 
-            {/* Category Hierarchy Section */}
+            {/* Category Selection */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Category Hierarchy</CardTitle>
+                <CardTitle className="text-lg">Subcategory</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormGroupSelect
-                    control={form.control}
-                    name="materialId"
-                    label="Material (Level 1)"
-                    placeholder="Select material..."
-                    options={materialOptions}
-                  />
-                  <FormGroupSelect
-                    control={form.control}
-                    name="genderId"
-                    label="Gender (Level 2)"
-                    placeholder="Select gender..."
-                    options={genderOptions}
-                    disabled={!materialId}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormGroupSelect
-                    control={form.control}
-                    name="itemId"
-                    label="Item Type (Level 3)"
-                    placeholder="Select item..."
-                    options={itemOptions}
-                    disabled={!genderId}
-                  />
-                  <FormGroupSelect
-                    control={form.control}
-                    name="categoryId"
-                    label="Category (Level 4)"
-                    placeholder="Select category..."
-                    options={categoryOptions}
-                    disabled={!itemId}
-                  />
-                </div>
                 <FormGroupSelect
                   control={form.control}
                   name="subcategoryId"
-                  label="Subcategory (Level 5)"
-                  placeholder="Select subcategory..."
+                  label="Select Subcategory"
+                  placeholder="Search or select subcategory..."
                   options={subcategoryOptions}
-                  disabled={!categoryId}
                 />
 
-                {selectedMaterial && (
-                  <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-md">
-                    <Info className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm text-blue-700">
-                      Metal Type: <Badge variant="secondary">{selectedMaterial.metalType}</Badge>
-                    </span>
+                {selectedSubcategory && (
+                  <div className="p-3 bg-blue-50 rounded-md space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Info className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-700">Selected Hierarchy</span>
+                    </div>
+                    <div className="text-sm text-blue-700">
+                      {selectedSubcategory.displayLabel}
+                    </div>
+                    {selectedSubcategory.material && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <span className="text-xs text-blue-600">Metal Type:</span>
+                        <Badge variant="secondary">{selectedSubcategory.material.metalType}</Badge>
+                        {selectedSubcategory.hasPricingConfig && (
+                          <Badge variant="outline" className="text-green-600 border-green-300">Has Pricing</Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -493,13 +431,6 @@ const ProductFormV2 = () => {
                   name="careHandling"
                   label="Care & Handling"
                   placeholder="Enter care instructions"
-                />
-                <FormGroupSelect
-                  control={form.control}
-                  name="brand"
-                  label="Brand"
-                  placeholder="Select brand..."
-                  options={brandOptions}
                 />
               </CardContent>
             </Card>
@@ -711,20 +642,11 @@ const ProductFormV2 = () => {
                       Price will be calculated automatically based on:
                     </p>
                     <ul className="text-xs text-gray-500 mt-2 space-y-1">
-                      <li>• Metal rate for {selectedMaterial?.metalType || "selected material"}</li>
+                      <li>• Metal rate for {selectedSubcategory?.material?.metalType || "selected material"}</li>
                       <li>• Net weight: {netWeight || 0}g</li>
                       <li>• Subcategory pricing config</li>
                       <li>• Gemstone costs (if any)</li>
                     </ul>
-                  </div>
-                )}
-
-                {pricePreview && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-                    <p className="text-sm font-medium text-green-800">Price Preview</p>
-                    <p className="text-2xl font-bold text-green-700">
-                      ₹{pricePreview.totalPrice?.toLocaleString()}
-                    </p>
                   </div>
                 )}
 
@@ -733,7 +655,7 @@ const ProductFormV2 = () => {
                   variant="outline"
                   className="w-full"
                   onClick={handlePreviewPrice}
-                  disabled={!subcategoryId || !grossWeight || !netWeight || isPreviewLoading}
+                  disabled={!subcategoryId || !grossWeight || !netWeight}
                 >
                   <Calculator className="h-4 w-4 mr-2" />
                   Preview Price
