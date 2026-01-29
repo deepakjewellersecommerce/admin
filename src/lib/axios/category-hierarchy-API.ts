@@ -97,6 +97,7 @@ export interface SubcategoryFlat extends Omit<Subcategory, 'categoryId' | 'mater
   genderId: string;
   itemId: string;
   parentSubcategoryId?: string | null;
+  material?: Material;
 }
 
 export interface SubcategoryPricing {
