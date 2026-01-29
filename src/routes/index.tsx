@@ -215,6 +215,14 @@ export default function Router() {
           ),
         },
         {
+          path: "categories/hierarchy",
+          element: (
+            <GuestGuard>
+              <CategoryHierarchyPage />
+            </GuestGuard>
+          ),
+        },
+        {
           path: "categories/add",
           element: <AddCategory />,
         },

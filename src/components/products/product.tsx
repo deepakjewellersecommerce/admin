@@ -8,6 +8,7 @@ interface ProductVariant {
 }
 
 interface Product {
+  brand?: string;
   productTitle: string;
   productSlug: string;
   skuNo: string;

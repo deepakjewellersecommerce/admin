@@ -8,9 +8,7 @@ import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +44,6 @@ import {
   ChevronRight,
   Plus,
   Edit,
-  Layers,
   Tag,
   Users,
   Diamond,
@@ -69,7 +66,7 @@ import {
   useGetCategoryImpact,
 } from "@/lib/react-query/category-hierarchy-query";
 import { useGetMetalTypes } from "@/lib/react-query/metal-price-query";
-import { Material, Gender, Item, Category } from "@/lib/axios/category-hierarchy-API";
+// import { Material, Gender, Item, Category } from "@/lib/axios/category-hierarchy-API";
 
 const CategoryHierarchyPage = () => {
   const [showDialog, setShowDialog] = useState(false);
@@ -259,6 +256,7 @@ const CategoryHierarchyPage = () => {
     isUpdatingItem ||
     isUpdatingCategory;
 
+  /*
   const tabConfig = [
     {
       id: "materials",
@@ -285,6 +283,7 @@ const CategoryHierarchyPage = () => {
       description: "Level 4: Style categories (Traditional, Modern, Wedding)",
     },
   ];
+  */
 
   const renderForm = () => {
     const isEditing = !!editItem;
@@ -541,10 +540,10 @@ const CategoryHierarchyPage = () => {
 
     // Combine all levels into one table
     const allItems = [
-      ...materials.map(m => ({ ...m, level: 'Material', levelIcon: Diamond })),
-      ...genders.map(g => ({ ...g, level: 'Gender', levelIcon: Users })),
-      ...items.map(i => ({ ...i, level: 'Item', levelIcon: Grid3X3 })),
-      ...categories.map(c => ({ ...c, level: 'Category', levelIcon: Tag })),
+      ...materials.map((m: any) => ({ ...m, level: 'Material', levelIcon: Diamond })),
+      ...genders.map((g: any) => ({ ...g, level: 'Gender', levelIcon: Users })),
+      ...items.map((i: any) => ({ ...i, level: 'Item', levelIcon: Grid3X3 })),
+      ...categories.map((c: any) => ({ ...c, level: 'Category', levelIcon: Tag })),
     ];
 
     return (

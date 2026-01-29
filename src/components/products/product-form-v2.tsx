@@ -131,6 +131,10 @@ const defaultValues: ProductFormData = {
 
 const ProductFormV2 = () => {
   const navigate = useNavigate();
+<<<<<<< Updated upstream
+=======
+  const [pricePreview] = useState<any>(null);
+>>>>>>> Stashed changes
   const [weightWarning, setWeightWarning] = useState<string | null>(null);
 
   const form = useForm<ProductFormData>({
@@ -153,6 +157,43 @@ const ProductFormV2 = () => {
   const { data: subcategoriesData } = useGetAllSubcategoriesFlat();
 
   const { mutate: addProduct, isPending } = useAddProduct();
+<<<<<<< Updated upstream
+=======
+  const { isPending: isPreviewLoading } = useGetPricePreview();
+
+  // Build options
+  const materialOptions = useMemo(() => {
+    const materials = materialsData?.data?.materials || [];
+    return materials.map((m: any) => ({
+      label: `${m.name} (${m.metalType})`,
+      value: m._id,
+    }));
+  }, [materialsData]);
+
+  const genderOptions = useMemo(() => {
+    const genders = gendersData?.data?.genders || [];
+    return genders.map((g: any) => ({
+      label: g.name,
+      value: g._id,
+    }));
+  }, [gendersData]);
+
+  const itemOptions = useMemo(() => {
+    const items = itemsData?.data?.items || [];
+    return items.map((i: any) => ({
+      label: i.name,
+      value: i._id,
+    }));
+  }, [itemsData]);
+
+  const categoryOptions = useMemo(() => {
+    const categories = categoriesData?.data?.categories || [];
+    return categories.map((c: any) => ({
+      label: c.name,
+      value: c._id,
+    }));
+  }, [categoriesData]);
+>>>>>>> Stashed changes
 
   // Build flat subcategory options for single dropdown
   const subcategoryOptions = useMemo(() => {
