@@ -79,35 +79,11 @@ const DashboardHome = () => {
       </h1>
       
       {/* Low Stock Alert Section */}
-      {!isLoadingLowStock && lowStockItems.length > 0 && (
+      {!_isLoadingLowStock && lowStockItems.length > 0 && (
         <LowStockAlert items={lowStockItems} threshold={5} />
       )}
       
       {/* Dynamic Pricing Section */}
-      {/* <Card className="mb-8">
-        <CardHeader className="bg-blue-50">
-          <CardTitle className="flex items-center text-blue-700">
-            <RefreshCcw className="mr-2 h-5 w-5" />
-            Dynamic Pricing Update
-          </CardTitle>
-          <CardDescription className="text-blue-600">
-            Update all product prices based on current silver rates
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <p className="mb-4">
-            Silver jewelry prices are calculated based on the current silver rate, labor percentage, and GST.
-            Click the button below to update all product prices.
-          </p>
-          <Button 
-            onClick={handleUpdateAllPricing} 
-            disabled={isUpdatingPrices}
-          >
-            {isUpdatingPrices ? "Updating..." : "Update All Prices"}
-          </Button>
-        </CardContent>
-      </Card> */}
-      
       <section className="mb-8 p-4 bg-gray-50 rounded-lg border">
         <h2 className="text-xl font-semibold mb-2">Orders</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

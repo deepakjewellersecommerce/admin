@@ -296,6 +296,14 @@ export const useGetAllSubcategories = (params?: {
   });
 };
 
+export const useGetAllSubcategoriesFlat = () => {
+  return useQuery({
+    queryKey: ["subcategories", "list", "flat"],
+    queryFn: () => categoryHierarchyAPI.getAllSubcategoriesFlat(),
+    staleTime: 15 * 60 * 1000,
+  });
+};
+
 export const useGetSubcategory = (id: string) => {
   return useQuery({
     queryKey: ["subcategories", id],

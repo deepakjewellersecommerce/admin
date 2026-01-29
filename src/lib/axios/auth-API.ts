@@ -5,7 +5,12 @@ export const authAPI = {
     return instance.post('/signup',payload);
   },
   loginUser:async (payload: unknown) => {
-    return instance.post('/admin/signin',payload);
+    // Don't include Authorization header for login requests
+    return instance.post('/admin/signin', payload, {
+      headers: {
+        'Authorization': undefined // Explicitly remove Authorization header
+      }
+    });
   },
   getUser: () => instance.get('/user/current'),
   getDashboardData: () => instance.get('/admin/dashboard'),

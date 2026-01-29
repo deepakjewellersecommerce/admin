@@ -52,7 +52,6 @@ import {
   useBulkFetchMetalPrices,
   useGetMetalPriceHistory,
   useGetAffectedProducts,
-  usePreviewBulkRecalculation,
   useConfirmBulkRecalculation,
   useInitializeMetalPrices,
 } from "@/lib/react-query/metal-price-query";
