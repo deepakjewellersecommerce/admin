@@ -88,6 +88,10 @@ const MetalPricingDashboard = () => {
   // Mutations
   const { mutate: updatePrice, isPending: isUpdating } = useUpdateMetalPrice();
   const { mutate: bulkFetch, isPending: isFetching } = useBulkFetchMetalPrices();
+<<<<<<< Updated upstream
+=======
+  usePreviewBulkRecalculation();
+>>>>>>> Stashed changes
   const { mutate: confirmRecalc, isPending: isRecalculating } = useConfirmBulkRecalculation();
   const { mutate: initializePrices, isPending: isInitializing } = useInitializeMetalPrices();
   const { mutate: bulkRecalculate, isPending: isBulkRecalculating } = useBulkRecalculatePrices();

@@ -137,7 +137,7 @@ const defaultValues: ProductFormData = {
 
 const ProductFormV2 = () => {
   const navigate = useNavigate();
-  const [pricePreview, setPricePreview] = useState<any>(null);
+  const [pricePreview] = useState<any>(null);
   const [weightWarning, setWeightWarning] = useState<string | null>(null);
 
   const form = useForm<ProductFormData>({
@@ -177,7 +177,7 @@ const ProductFormV2 = () => {
 
   const { options: brandOptions } = useGetBrandOptions();
   const { mutate: addProduct, isPending } = useAddProduct();
-  const { mutate: getPreview, isPending: isPreviewLoading } = useGetPricePreview();
+  const { isPending: isPreviewLoading } = useGetPricePreview();
 
   // Build options
   const materialOptions = useMemo(() => {
