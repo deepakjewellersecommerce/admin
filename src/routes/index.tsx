@@ -13,7 +13,6 @@ import {
   BlogsList,
   BrandsList,
   CartView,
-  CategoryHierarchyPage,
   CategoryList,
   CategoryPage,
   ColorList,

@@ -88,10 +88,7 @@ const MetalPricingDashboard = () => {
   // Mutations
   const { mutate: updatePrice, isPending: isUpdating } = useUpdateMetalPrice();
   const { mutate: bulkFetch, isPending: isFetching } = useBulkFetchMetalPrices();
-<<<<<<< Updated upstream
-=======
   usePreviewBulkRecalculation();
->>>>>>> Stashed changes
   const { mutate: confirmRecalc, isPending: isRecalculating } = useConfirmBulkRecalculation();
   const { mutate: initializePrices, isPending: isInitializing } = useInitializeMetalPrices();
   const { mutate: bulkRecalculate, isPending: isBulkRecalculating } = useBulkRecalculatePrices();
@@ -208,7 +205,7 @@ const MetalPricingDashboard = () => {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => bulkFetch(undefined)}
+            onClick={() => bulkFetch(undefined as any)}
             disabled={isFetching}
           >
             <RefreshCcw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
