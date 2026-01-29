@@ -79,7 +79,7 @@ const DashboardHome = () => {
       </h1>
       
       {/* Low Stock Alert Section */}
-      {!_isLoadingLowStock && lowStockItems.length > 0 && (
+      {!isLoadingLowStock && lowStockItems.length > 0 && (
         <LowStockAlert items={lowStockItems} threshold={5} />
       )}
       
