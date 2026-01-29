@@ -5,7 +5,7 @@ import { Fragment, PropsWithChildren } from 'react';
 import { Navigate } from 'react-router-dom';
 
 const AuthGuard = ({ children }: PropsWithChildren) => {
-    const { isLoading, isError, data: _data, error: _error } = useGetUser();
+    const { isLoading, isError } = useGetUser();
 
     if (isLoading)
         return (
