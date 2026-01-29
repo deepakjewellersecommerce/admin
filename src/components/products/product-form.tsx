@@ -238,7 +238,7 @@ const ProductForm = () => {
         onSettled: () => {
           // onSettled will rely on mutation's handlers to dismiss toasts
         },
-        onSuccess: (response) => {
+        onSuccess: () => {
           toast.success("Product added successfully!");
           navigate('/dashboard/products/list');
         },
