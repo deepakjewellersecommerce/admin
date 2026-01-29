@@ -1,7 +1,7 @@
 import DashboardCard from "@/components/dashboard/card";
 import LowStockAlert from "@/components/products/low-stock-alert";
 import { useDashboardData } from "@/lib/react-query/auth-query";
-import { useGetLowStockProducts, useBulkUpdatePricing } from "@/lib/react-query/product-query";
+import { useGetLowStockProducts } from "@/lib/react-query/product-query";
 import {
   Box,
   Package,
@@ -32,7 +32,6 @@ const DashboardHome = () => {
 
   const { data } = useDashboardData();
   const { data: lowStockData, isLoading: isLoadingLowStock } = useGetLowStockProducts(5);
-  useBulkUpdatePricing();
   
   const lowStockItems = useMemo(() => {
     return lowStockData?.data?.data?.items || [];
