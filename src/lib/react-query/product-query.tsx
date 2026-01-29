@@ -369,7 +369,7 @@ export const useUpdateProductStock = () => {
   return useMutation({
     mutationFn: ({ inventoryId, stockCount }: { inventoryId: string, stockCount: number }) => 
       productAPI.updateProductStock(inventoryId, stockCount),
-    onSuccess: (_, variables) => {
+    onSuccess: (_, _variables) => {
       toast.success("Product stock updated successfully!");
       queryClient.invalidateQueries({ queryKey: ["products"] });
       // Invalidate product detail and low stock caches
