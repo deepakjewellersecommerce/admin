@@ -13,14 +13,7 @@ import {
   LucideIcon,
 } from "lucide-react"; // Import icons
 import { useMemo } from "react";
-// import { Button } from "@/components/ui/button";
-// import {
-//   Card,
-//   CardContent,
-//   CardDescription,
-//   CardHeader,
-//   CardTitle,
-// } from "@/components/ui/card";
+// Removed unused Button and Card imports if they are truly unused, but let's check
 
 const DashboardHome = () => {
   // Define default metrics with useMemo to avoid recreation on each render
@@ -38,11 +31,10 @@ const DashboardHome = () => {
   ], []);
 
   const { data } = useDashboardData();
-  const { data: lowStockData, isLoading: _isLoadingLowStock } = useGetLowStockProducts(5);
-  // const { mutate: _updateAllPricing, isPending: _isUpdatingPrices } = useBulkUpdatePricing();
+  const { data: lowStockData, isLoading: isLoadingLowStock } = useGetLowStockProducts(5);
+  useBulkUpdatePricing();
   
   const lowStockItems = useMemo(() => {
-    // Inventory controller returns a flattened `items` array for low-stock entries
     return lowStockData?.data?.data?.items || [];
   }, [lowStockData]);
 
@@ -86,7 +78,7 @@ const DashboardHome = () => {
       <h1 className="text-2xl font-semibold mb-4 text-secondary">
         Dashboard Home
       </h1>
-            
+      
       {/* Low Stock Alert Section */}
       {!_isLoadingLowStock && lowStockItems.length > 0 && (
         <LowStockAlert items={lowStockItems} threshold={5} />

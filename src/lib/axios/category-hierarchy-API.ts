@@ -233,7 +233,10 @@ export const updateCategory = async (id: string, data: Partial<Category>) => {
   const response = await instance.put(`/admin/categories/categories/${id}`, data);
   return response.data;
 };
-
+export const deleteCategory = async (id: string) => {
+  const response = await instance.delete(`/admin/product/category/${id}/delete`);
+  return response.data;
+};
 export const getCategoryImpact = async (id: string) => {
   const response = await instance.get(`/admin/categories/categories/${id}/impact`);
   return response.data;
@@ -447,6 +450,7 @@ export default {
   getCategory,
   createCategory,
   updateCategory,
+  deleteCategory,
   getCategoryImpact,
   deleteCategory: async (id: string) => {
     const response = await instance.delete(`/admin/product/category/${id}/delete`);
@@ -463,6 +467,7 @@ export default {
   updateSubcategory,
   getSubcategoryImpact,
   deleteSubcategory,
+  checkSubcategoryAvailability,
   getSubcategoryTree,
   searchSubcategories,
   getSubcategoryAncestors,

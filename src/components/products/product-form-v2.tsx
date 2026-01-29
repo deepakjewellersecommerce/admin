@@ -131,10 +131,7 @@ const defaultValues: ProductFormData = {
 
 const ProductFormV2 = () => {
   const navigate = useNavigate();
-<<<<<<< Updated upstream
-=======
   const [pricePreview] = useState<any>(null);
->>>>>>> Stashed changes
   const [weightWarning, setWeightWarning] = useState<string | null>(null);
 
   const form = useForm<ProductFormData>({
@@ -157,8 +154,6 @@ const ProductFormV2 = () => {
   const { data: subcategoriesData } = useGetAllSubcategoriesFlat();
 
   const { mutate: addProduct, isPending } = useAddProduct();
-<<<<<<< Updated upstream
-=======
   const { isPending: isPreviewLoading } = useGetPricePreview();
 
   // Build options

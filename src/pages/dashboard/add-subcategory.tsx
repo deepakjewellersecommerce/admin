@@ -490,7 +490,7 @@ const AddSubcategoryPage = () => {
               <Button type="button" variant="outline" onClick={() => navigate(backUrl)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isCreating || isLoading || !!(idAttribute && availabilityQuery.isSuccess && isIdAvailable === false)}>
+              <Button type="submit" disabled={isCreating || isLoading || Boolean(idAttribute && availabilityQuery.isSuccess && isIdAvailable === false)}>
                 {isCreating ? "Creating..." : "Save Subcategory"}
               </Button>
             </div>

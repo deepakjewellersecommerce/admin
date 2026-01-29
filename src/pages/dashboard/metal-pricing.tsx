@@ -206,7 +206,7 @@ const MetalPricingDashboard = () => {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => bulkFetch(undefined)}
+            onClick={() => bulkFetch(undefined as any)}
             disabled={isFetching}
           >
             <RefreshCcw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />

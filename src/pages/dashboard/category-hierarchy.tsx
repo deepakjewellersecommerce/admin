@@ -66,7 +66,6 @@ import {
   useGetCategoryImpact,
 } from "@/lib/react-query/category-hierarchy-query";
 import { useGetMetalTypes } from "@/lib/react-query/metal-price-query";
-// import { Material, Gender, Item, Category } from "@/lib/axios/category-hierarchy-API";
 
 const CategoryHierarchyPage = () => {
   const [showDialog, setShowDialog] = useState(false);
@@ -255,35 +254,6 @@ const CategoryHierarchyPage = () => {
     isUpdatingGender ||
     isUpdatingItem ||
     isUpdatingCategory;
-
-  /*
-  const tabConfig = [
-    {
-      id: "materials",
-      label: "Materials",
-      icon: Diamond,
-      description: "Level 1: Metal types (Gold, Silver, Platinum)",
-    },
-    {
-      id: "genders",
-      label: "Genders",
-      icon: Users,
-      description: "Level 2: Target demographics (Men, Women, Unisex)",
-    },
-    {
-      id: "items",
-      label: "Item Types",
-      icon: Tag,
-      description: "Level 3: Jewelry types (Ring, Necklace, Earring)",
-    },
-    {
-      id: "categories",
-      label: "Categories",
-      icon: Grid3X3,
-      description: "Level 4: Style categories (Traditional, Modern, Wedding)",
-    },
-  ];
-  */
 
   const renderForm = () => {
     const isEditing = !!editItem;
