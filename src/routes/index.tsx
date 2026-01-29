@@ -49,6 +49,7 @@ import {
   SubcategoryListPage,
   AddCategoryPage,
   AddSubcategoryPage,
+  CategoryHierarchyPage,
 } from "./elements";
 import ProductRatingList from "@/components/product-rating/product-rating-list";
 import UpdateRatingForm from "@/components/review/update-review-form";

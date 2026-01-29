@@ -484,10 +484,6 @@ export default {
   updateCategory,
   deleteCategory,
   getCategoryImpact,
-  deleteCategory: async (id: string) => {
-    const response = await instance.delete(`/admin/product/category/${id}/delete`);
-    return response.data;
-  },
   // Hierarchy
   getFullHierarchy,
   getCascadeOptions,
@@ -503,10 +499,8 @@ export default {
   checkSubcategoryAvailability,
   getSubcategoryTree,
   searchSubcategories,
-  checkSubcategoryAvailability,
   getSubcategoryAncestors,
   getSubcategoryDescendants,
-  checkSubcategoryAvailability,
   // Subcategory Pricing
   getSubcategoryPricing,
   updateSubcategoryPricing,

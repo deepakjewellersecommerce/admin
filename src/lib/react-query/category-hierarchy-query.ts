@@ -307,8 +307,8 @@ export const useGetAllSubcategories = (params?: {
 export const useGetAllSubcategoriesFlat = () => {
   return useQuery({
     queryKey: ["subcategories", "list", "flat"],
-    queryFn: () => categoryHierarchyAPI.getAllSubcategories({ limit: 1000 }),
-    staleTime: 5 * 60 * 1000,
+    queryFn: () => categoryHierarchyAPI.getAllSubcategoriesFlat(),
+    staleTime: 15 * 60 * 1000,
   });
 };
 
