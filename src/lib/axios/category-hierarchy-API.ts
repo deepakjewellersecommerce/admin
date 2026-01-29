@@ -90,6 +90,15 @@ export interface Subcategory {
   children?: Subcategory[];
 }
 
+export interface SubcategoryFlat extends Omit<Subcategory, 'categoryId' | 'materialId' | 'genderId' | 'itemId' | 'parentSubcategoryId'> {
+  displayLabel: string;
+  categoryId: string;
+  materialId: string;
+  genderId: string;
+  itemId: string;
+  parentSubcategoryId?: string | null;
+}
+
 export interface SubcategoryPricing {
   _id: string;
   subcategoryId: string;
@@ -452,10 +461,6 @@ export default {
   updateCategory,
   deleteCategory,
   getCategoryImpact,
-  deleteCategory: async (id: string) => {
-    const response = await instance.delete(`/admin/product/category/${id}/delete`);
-    return response.data;
-  },
   // Hierarchy
   getFullHierarchy,
   getCascadeOptions,
@@ -472,7 +477,6 @@ export default {
   searchSubcategories,
   getSubcategoryAncestors,
   getSubcategoryDescendants,
-  checkSubcategoryAvailability,
   // Subcategory Pricing
   getSubcategoryPricing,
   updateSubcategoryPricing,
