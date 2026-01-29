@@ -5,7 +5,7 @@ import { FormProvider as Form, UseFormReturn } from 'react-hook-form';
 type Props = {
   children: ReactNode;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  methods: UseFormReturn<any, unknown, undefined>;
+  methods: UseFormReturn<any, any, any>;
   className?:string;
   onSubmit: () => void;
 };
