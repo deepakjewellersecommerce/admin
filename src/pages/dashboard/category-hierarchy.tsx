@@ -541,10 +541,10 @@ const CategoryHierarchyPage = () => {
 
     // Combine all levels into one table
     const allItems = [
-      ...materials.map(m => ({ ...m, level: 'Material', levelIcon: Diamond })),
-      ...genders.map(g => ({ ...g, level: 'Gender', levelIcon: Users })),
-      ...items.map(i => ({ ...i, level: 'Item', levelIcon: Grid3X3 })),
-      ...categories.map(c => ({ ...c, level: 'Category', levelIcon: Tag })),
+      ...materials.map((m: any) => ({ ...m, level: 'Material', levelIcon: Diamond })),
+      ...genders.map((g: any) => ({ ...g, level: 'Gender', levelIcon: Users })),
+      ...items.map((i: any) => ({ ...i, level: 'Item', levelIcon: Grid3X3 })),
+      ...categories.map((c: any) => ({ ...c, level: 'Category', levelIcon: Tag })),
     ];
 
     return (
