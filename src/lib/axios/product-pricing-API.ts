@@ -13,13 +13,14 @@ export interface PricingMode {
 }
 
 export interface ProductPricingComponent {
+  componentId?: string;
   componentKey: string;
   componentName: string;
-  calculationType: string;
+  calculationType: "PER_GRAM" | "PERCENTAGE" | "FIXED";
   value: number;
-  formula?: string | null;
-  formulaChips?: string[];
-  percentageOf?: string;
+  percentageOf?: "metalCost" | "subtotal";
+  metalPriceMode?: "AUTO" | "MANUAL";
+  manualMetalPrice?: number | null;
   isFrozen: boolean;
   frozenValue?: number | null;
   frozenAt?: string | null;
@@ -28,7 +29,6 @@ export interface ProductPricingComponent {
   frozenBy?: string | null;
   originalCalculationType?: string | null;
   originalValue?: number | null;
-  originalFormula?: string | null;
 }
 
 export interface ProductPricingConfig {

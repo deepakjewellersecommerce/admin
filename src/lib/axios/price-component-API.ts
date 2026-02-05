@@ -1,6 +1,6 @@
 /**
  * Price Component API Service
- * Handles API calls for price components and formula validation
+ * Handles API calls for price components
  */
 
 import instance from "./instance";
@@ -12,23 +12,15 @@ export interface CalculationType {
   description: string;
 }
 
-export interface FormulaVariable {
-  key: string;
-  label: string;
-  description: string;
-  example: number;
-}
-
 export interface PriceComponent {
   _id: string;
   name: string;
   key: string;
   description?: string;
-  calculationType: "PER_GRAM" | "PERCENTAGE" | "FIXED" | "FORMULA";
+  calculationType: "PER_GRAM" | "PERCENTAGE" | "FIXED";
   defaultValue: number;
-  formula?: string | null;
-  formulaChips?: string[];
-  percentageOf?: string;
+  percentageOf?: "metalCost" | "subtotal";
+  metalPriceMode?: "AUTO" | "MANUAL";
   isSystemComponent: boolean;
   allowsFreeze: boolean;
   isActive: boolean;
@@ -37,14 +29,6 @@ export interface PriceComponent {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface FormulaValidationResult {
-  valid: boolean;
-  errors: string[];
-  warnings: string[];
-  testResult?: number;
-  parsedFormula?: string;
 }
 
 export interface ComponentCalculationResult {
@@ -70,14 +54,6 @@ export interface ComponentCalculationResult {
  */
 export const getCalculationTypes = async () => {
   const response = await instance.get("/admin/price-components/calculation-types");
-  return response.data;
-};
-
-/**
- * Get formula variables
- */
-export const getFormulaVariables = async () => {
-  const response = await instance.get("/admin/price-components/formula-variables");
   return response.data;
 };
 
@@ -135,20 +111,6 @@ export const deleteComponent = async (id: string, force?: boolean) => {
 };
 
 /**
- * Validate formula
- */
-export const validateFormula = async (
-  formula: string,
-  testValues?: Record<string, number>
-) => {
-  const response = await instance.post("/admin/price-components/validate-formula", {
-    formula,
-    testValues
-  });
-  return response.data;
-};
-
-/**
  * Calculate component value (preview)
  */
 export const calculateComponentValue = async (
@@ -174,14 +136,12 @@ export const reorderComponents = async (order: { id: string }[]) => {
 
 export default {
   getCalculationTypes,
-  getFormulaVariables,
   getAllComponents,
   getSystemComponents,
   getComponent,
   createComponent,
   updateComponent,
   deleteComponent,
-  validateFormula,
   calculateComponentValue,
   reorderComponents
 };

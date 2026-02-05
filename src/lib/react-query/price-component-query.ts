@@ -19,17 +19,6 @@ export const useGetCalculationTypes = () => {
 };
 
 /**
- * Hook to get formula variables
- */
-export const useGetFormulaVariables = () => {
-  return useQuery({
-    queryKey: ["priceComponents", "formulaVariables"],
-    queryFn: priceComponentAPI.getFormulaVariables,
-    staleTime: Infinity,
-  });
-};
-
-/**
  * Hook to get all price components
  */
 export const useGetAllComponents = (params?: {
@@ -114,24 +103,6 @@ export const useDeleteComponent = () => {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || "Failed to delete component");
-    },
-  });
-};
-
-/**
- * Hook to validate formula
- */
-export const useValidateFormula = () => {
-  return useMutation({
-    mutationFn: ({
-      formula,
-      testValues,
-    }: {
-      formula: string;
-      testValues?: Record<string, number>;
-    }) => priceComponentAPI.validateFormula(formula, testValues),
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Formula validation failed");
     },
   });
 };
