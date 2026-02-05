@@ -2,10 +2,11 @@ import { ColumnDef } from "@tanstack/react-table";
 import Product from "./product";
 import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, DollarSign } from "lucide-react";
 import AlertConfirm from "../ui/alert-confirm";
 import { useDeleteProduct } from "@/lib/react-query/product-query";
 import { Badge } from "../ui/badge";
+import { useNavigate } from "react-router-dom";
 
 export const ProductColumns: ColumnDef<Product>[] = [
   {
@@ -178,20 +179,23 @@ export const ProductColumns: ColumnDef<Product>[] = [
 
 function ActionButtons({ id }: { id?: string }) {
   const deleteMut = useDeleteProduct();
+  const navigate = useNavigate();
+
   return (
-    <div className="flex  gap-2">
+    <div className="flex gap-2">
+      <Button
+        variant="outline"
+        size={"icon"}
+        onClick={() => navigate(`/dashboard/products/${id}/pricing`)}
+        title="Customize Pricing"
+      >
+        <DollarSign size={18} />
+      </Button>
       <Link to={`/dashboard/products/edit/${id}`}>
         <Button variant="outline" size={"icon"}>
           <Pencil size={18} />
         </Button>
       </Link>
-      {/* Rating action removed per request:
-      <Link to={`/dashboard/products/rating/${id}`}>
-        <Button variant="outline" size={"icon"}>
-          <Star size={20} />
-        </Button>
-      </Link>
-      */}
       <AlertConfirm
         actionMessage="Delete"
         title="Delete Product"

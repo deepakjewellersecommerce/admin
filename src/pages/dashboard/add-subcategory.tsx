@@ -35,29 +35,32 @@ const subcategorySchema = z.object({
     .max(10, "Max 10 characters")
     .regex(/^[^-]+$/, "Hyphens not allowed"),
   description: z.string().optional(),
+  weight: z.coerce.number().positive().optional(),
   isActive: z.boolean().default(true),
   pricingMode: z.enum(["inherit", "custom"]).default("inherit"),
-});
+}).refine(
+  (data) => data.pricingMode !== "custom" || (data.weight && data.weight > 0),
+  { message: "Weight is required for custom pricing", path: ["weight"] }
+);
 
 type SubcategoryFormData = z.infer<typeof subcategorySchema>;
 
 interface PricingComponent {
   componentKey: string;
   componentName: string;
-  calculationType: string;
+  calculationType: "PER_GRAM" | "PERCENTAGE" | "FIXED";
   value: number;
-  formula?: string;
-  _prevCalculationType?: string;
-  _prevValue?: number;
+  percentageOf?: "metalCost" | "subtotal";
+  metalPriceMode?: "AUTO" | "MANUAL";
+  manualMetalPrice?: number;
 }
 
 // Default pricing components (keys must match PriceComponent.key in database)
 const DEFAULT_PRICING_COMPONENTS: PricingComponent[] = [
-  { componentKey: "metal_cost", componentName: "Metal Cost", calculationType: "PER_GRAM", value: 1 },
-  { componentKey: "making_charges", componentName: "Making Charges", calculationType: "PERCENTAGE", value: 15 },
-  // Change: Wastage default to PERCENTAGE 5% (simpler UX). Advanced: allow switching to FORMULA.
-  { componentKey: "wastage_charges", componentName: "Wastage Charges", calculationType: "PERCENTAGE", value: 5 },
-  { componentKey: "gst", componentName: "GST", calculationType: "PERCENTAGE", value: 3 },
+  { componentKey: "metal_cost", componentName: "Metal Cost", calculationType: "PER_GRAM", value: 1, metalPriceMode: "AUTO" },
+  { componentKey: "making_charges", componentName: "Making Charges", calculationType: "PERCENTAGE", value: 15, percentageOf: "metalCost" },
+  { componentKey: "wastage_charges", componentName: "Wastage Charges", calculationType: "PERCENTAGE", value: 5, percentageOf: "metalCost" },
+  { componentKey: "gst", componentName: "GST", calculationType: "PERCENTAGE", value: 3, percentageOf: "subtotal" },
 ];
 
 const AddSubcategoryPage = () => {
@@ -82,6 +85,7 @@ const AddSubcategoryPage = () => {
       name: "",
       idAttribute: "",
       description: "",
+      weight: undefined,
       isActive: true,
       pricingMode: "inherit",
     },
@@ -150,6 +154,7 @@ const AddSubcategoryPage = () => {
       name: data.name,
       idAttribute: data.idAttribute.toUpperCase(),
       description: data.description,
+      weight: data.weight || null,
       isActive: data.isActive,
       categoryId: categoryId,
       parentSubcategoryId: subId || null,
@@ -159,15 +164,16 @@ const AddSubcategoryPage = () => {
     if (data.pricingMode === "custom") {
       payload.configurePricing = true;
       payload.pricingConfig = {
-        components: pricingComponents.map((comp) => {
-          const { _prevCalculationType, _prevValue, ...rest } = comp as any;
-          return {
-            ...rest,
-            value: rest.value ?? 0,
-            formula: rest.formula ?? null,
-            isFrozen: false,
-          };
-        }),
+        components: pricingComponents.map((comp) => ({
+          componentKey: comp.componentKey,
+          componentName: comp.componentName,
+          calculationType: comp.calculationType,
+          value: comp.value ?? 0,
+          percentageOf: comp.percentageOf ?? "metalCost",
+          metalPriceMode: comp.metalPriceMode ?? null,
+          manualMetalPrice: comp.manualMetalPrice ?? null,
+          isFrozen: false,
+        })),
       };
     }
 
@@ -175,7 +181,6 @@ const AddSubcategoryPage = () => {
 
     createSubcategory(payload, {
       onSuccess: () => {
-        toast.success("Subcategory created successfully");
         // Navigate back to the subcategory list
         if (subId) {
           navigate(`/dashboard/catalog/categories/${categoryId}/${subId}`);
@@ -202,32 +207,9 @@ const AddSubcategoryPage = () => {
         componentName: "New Component",
         calculationType: "PERCENTAGE",
         value: 0,
+        percentageOf: "metalCost",
       },
     ]);
-  };
-
-  // Toggle Advanced (switch between PERCENTAGE/FIXED/PER_GRAM and FORMULA)
-  const toggleAdvanced = (index: number) => {
-    const updated = [...pricingComponents];
-    const comp = { ...updated[index] };
-
-    if (comp.calculationType !== "FORMULA") {
-      // store previous state to restore later
-      comp._prevCalculationType = comp.calculationType;
-      comp._prevValue = comp.value;
-      comp.calculationType = "FORMULA";
-      comp.formula = comp.formula || "(grossWeight - netWeight) * metalRate * 0.05";
-    } else {
-      // restore previous simple mode
-      comp.calculationType = comp._prevCalculationType || "PERCENTAGE";
-      comp.value = comp._prevValue !== undefined ? comp._prevValue : comp.value || 0;
-      delete comp._prevCalculationType;
-      delete comp._prevValue;
-      // keep formula if user wants it saved separately
-    }
-
-    updated[index] = comp;
-    setPricingComponents(updated);
   };
 
   // Remove pricing component
@@ -388,6 +370,25 @@ const AddSubcategoryPage = () => {
                 </button>
               </div>
 
+              {/* Weight field (required for custom pricing) */}
+              {pricingMode === "custom" && (
+                <div className="space-y-2">
+                  <Label>Default Weight (grams) *</Label>
+                  <Input
+                    type="number"
+                    step="0.001"
+                    placeholder="e.g., 5.5"
+                    {...form.register("weight")}
+                  />
+                  {form.formState.errors.weight && (
+                    <p className="text-sm text-red-500">{form.formState.errors.weight.message}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Default weight for pricing calculations in this subcategory
+                  </p>
+                </div>
+              )}
+
               {/* Custom Pricing Components */}
               {pricingMode === "custom" && (
                 <Card className="bg-gray-50 border-dashed">
@@ -411,26 +412,26 @@ const AddSubcategoryPage = () => {
                           />
 
                           <div className="flex items-center gap-2">
-                            <select
-                              className="px-3 py-2 border rounded-md text-sm bg-white"
-                              value={comp.calculationType}
-                              onChange={(e) => updateComponentValue(index, "calculationType", e.target.value)}
-                            >
-                              <option value="PER_GRAM">Per Gram</option>
-                              <option value="PERCENTAGE">Percentage</option>
-                              <option value="FIXED">Fixed</option>
-                              <option value="FORMULA">Formula (Advanced)</option>
-                            </select>
-
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={comp.calculationType === "FORMULA" ? "outline" : "ghost"}
-                              onClick={() => toggleAdvanced(index)}
-                              aria-label={comp.calculationType === "FORMULA" ? "Switch to Simple" : "Switch to Advanced Formula"}
-                            >
-                              {comp.calculationType === "FORMULA" ? "Simple" : "Advanced"}
-                            </Button>
+                            {comp.componentKey === "metal_cost" ? (
+                              <select
+                                className="px-3 py-2 border rounded-md text-sm bg-white"
+                                value={comp.metalPriceMode || "AUTO"}
+                                onChange={(e) => updateComponentValue(index, "metalPriceMode", e.target.value)}
+                              >
+                                <option value="AUTO">Auto (System Rate)</option>
+                                <option value="MANUAL">Manual Price</option>
+                              </select>
+                            ) : (
+                              <select
+                                className="px-3 py-2 border rounded-md text-sm bg-white"
+                                value={comp.calculationType}
+                                onChange={(e) => updateComponentValue(index, "calculationType", e.target.value)}
+                              >
+                                <option value="PER_GRAM">Per Gram</option>
+                                <option value="PERCENTAGE">Percentage</option>
+                                <option value="FIXED">Fixed</option>
+                              </select>
+                            )}
 
                             <Button
                               type="button"
@@ -444,18 +445,22 @@ const AddSubcategoryPage = () => {
                           </div>
                         </div>
 
-                        {comp.calculationType === "FORMULA" ? (
-                          <div className="space-y-2">
-                            <Textarea
-                              value={comp.formula || ""}
-                              onChange={(e) => updateComponentValue(index, "formula", e.target.value)}
-                              placeholder="e.g., (grossWeight - netWeight) * metalRate * 0.05"
-                              className="font-mono text-sm"
-                              rows={3}
+                        {/* Metal Cost - Manual price input */}
+                        {comp.componentKey === "metal_cost" && comp.metalPriceMode === "MANUAL" && (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              className="w-32"
+                              value={comp.manualMetalPrice || ""}
+                              onChange={(e) => updateComponentValue(index, "manualMetalPrice", parseFloat(e.target.value) || 0)}
+                              placeholder="Price per gram"
                             />
-                            <p className="text-xs text-gray-500">Advanced formula mode — use variables like grossWeight, netWeight, metalRate, subtotal</p>
+                            <span className="text-sm text-gray-500">₹/gram</span>
                           </div>
-                        ) : (
+                        )}
+
+                        {/* Regular components - value input */}
+                        {comp.componentKey !== "metal_cost" && (
                           <div className="flex items-center gap-2">
                             <Input
                               type="number"
@@ -467,6 +472,18 @@ const AddSubcategoryPage = () => {
                             <span className="text-sm text-gray-500 w-8">
                               {comp.calculationType === "PERCENTAGE" ? "%" : comp.calculationType === "PER_GRAM" ? "/g" : "₹"}
                             </span>
+
+                            {/* Percentage base selector */}
+                            {comp.calculationType === "PERCENTAGE" && (
+                              <select
+                                className="px-2 py-1 border rounded-md text-xs bg-white"
+                                value={comp.percentageOf || "metalCost"}
+                                onChange={(e) => updateComponentValue(index, "percentageOf", e.target.value)}
+                              >
+                                <option value="metalCost">of Metal Cost</option>
+                                <option value="subtotal">of Subtotal</option>
+                              </select>
+                            )}
                           </div>
                         )}
                       </div>

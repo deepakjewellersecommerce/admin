@@ -74,3 +74,4 @@ export const CategoryManagementPage = Loadable(lazy(() => import("@/pages/dashbo
 export const SubcategoryListPage = Loadable(lazy(() => import("@/pages/dashboard/subcategory-list")));
 export const AddCategoryPage = Loadable(lazy(() => import("@/pages/dashboard/add-category")));
 export const AddSubcategoryPage = Loadable(lazy(() => import("@/pages/dashboard/add-subcategory")));
+export const ProductPricingPage = Loadable(lazy(() => import("@/pages/dashboard/product-pricing")));

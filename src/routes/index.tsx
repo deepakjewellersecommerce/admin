@@ -50,6 +50,7 @@ import {
   AddCategoryPage,
   AddSubcategoryPage,
   CategoryHierarchyPage,
+  ProductPricingPage,
 } from "./elements";
 import ProductRatingList from "@/components/product-rating/product-rating-list";
 import UpdateRatingForm from "@/components/review/update-review-form";
@@ -197,6 +198,10 @@ export default function Router() {
         {
           path: "products/edit/:id",
           element: <UpdateProductForm />,
+        },
+        {
+          path: "products/:id/pricing",
+          element: <ProductPricingPage />,
         },
         {
           path: "settings/web",

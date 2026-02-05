@@ -76,8 +76,6 @@ import {
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   useGetCalculationTypes,
-  useGetFormulaVariables,
-  useValidateFormula,
 } from "@/lib/react-query/price-component-query";
 import { PricingComponent } from "@/lib/axios/category-hierarchy-API";
 
@@ -85,6 +83,7 @@ interface BreakdownComponent {
   componentKey: string;
   componentName: string;
   value: number;
+  calculatedValue?: number;
 }
 
 const SubcategoryListPage = () => {
@@ -103,7 +102,6 @@ const SubcategoryListPage = () => {
   const [showFreezeDialog, setShowFreezeDialog] = useState(false);
   const [freezeComponent, setFreezeComponent] = useState<string>("");
   const [freezeReason, setFreezeReason] = useState("");
-  const [formulaError, setFormulaError] = useState<string | null>(null);
 
   // Unsaved changes tracking for pricing form
   const [originalPricingSnapshot, setOriginalPricingSnapshot] = useState<string | null>(null);
@@ -140,12 +138,10 @@ const SubcategoryListPage = () => {
     selectedSubcategory?._id || ""
   );
   const { data: calculationTypesData } = useGetCalculationTypes();
-  const { data: formulaVariablesData } = useGetFormulaVariables();
 
   const { mutate: updatePricing, isPending: isUpdatingPricing } = useUpdateSubcategoryPricing();
   const { mutate: createDefaultPricing, isPending: isCreatingDefaultPricing } = useCreateDefaultSubcategoryPricing();
   const { mutate: removePricing, isPending: isRemovingPricing } = useRemoveSubcategoryPricing();
-  const { mutate: validateFormula } = useValidateFormula();
 
   // Freeze/unfreeze mutations
   const { mutate: freezeSubcategoryComponent, isPending: isFreezing } = useFreezeSubcategoryComponent();
@@ -178,13 +174,7 @@ const SubcategoryListPage = () => {
         setDeleteItem(null);
       },
       onError: (error: any) => {
-        const reason =
-          error?.response?.data?.error?.message ||
-          error?.response?.data?.message ||
-          (typeof error?.response?.data === "string" ? error.response.data : null) ||
-          error?.message ||
-          "Failed to delete subcategory";
-        toast.error(`Failed to delete subcategory: ${reason}`);
+        console.error(error);
       }
     });
   };
@@ -253,8 +243,6 @@ const SubcategoryListPage = () => {
   // Pricing configuration helpers
   // calculationTypes comes from API response -> response.data -> { types }
   const calculationTypes = calculationTypesData?.data?.types || [];
-  const formulaVariables = formulaVariablesData?.data?.variables || [];
-  const operators = formulaVariablesData?.data?.operators || ["+", "-", "×", "÷", "(", ")"];
 
   const pricingSource = pricingData?.data?.pricingSource || pricingData?.pricingSource || null;
   const hasCustomPricing = selectedSubcategory?.hasPricingConfig || false;
@@ -290,26 +278,7 @@ const SubcategoryListPage = () => {
     setSelectedSubcategory(subcategory);
     // Initialize with current pricing config or empty array
     const currentConfig = pricingData?.data?.pricingConfig?.components || pricingData?.pricingConfig?.components || [];
-
-    // Normalize legacy Wastage formula to a percentage for simpler UX when it matches the old default
-    const normalized = currentConfig.map((c: any) => {
-      if (c.componentKey === "wastage_charges" && c.calculationType === "FORMULA") {
-        const formula = (c.formula || "").toString();
-        // If formula looks like the legacy wastage formula, show Percentage 5% in the UI by default
-        if (/grossWeight.*netWeight.*metalRate/i.test(formula)) {
-          return {
-            ...c,
-            _legacyFormula: formula,
-            calculationType: "PERCENTAGE",
-            value: c.value ?? 5,
-            formula: null,
-          };
-        }
-      }
-      return c;
-    });
-
-    setPricingFormData([...normalized]);
+    setPricingFormData([...currentConfig]);
     setShowPricingDialog(true);
   };
 
@@ -342,46 +311,10 @@ const SubcategoryListPage = () => {
     setShowFreezeDialog(true);
   };
 
-  // Toggle Advanced formula mode for a component (switch to/from FORMULA)
-  const handleToggleAdvanced = (componentKey: string) => {
-    const defaultWastageFormula = "(grossWeight - netWeight) * metalRate * 0.05";
-    setPricingFormData(prev => {
-      const updated = prev.map(comp => {
-        if (comp.componentKey !== componentKey) return comp;
-
-        if (comp.calculationType !== "FORMULA") {
-          return {
-            ...comp,
-            _prevCalculationType: comp.calculationType,
-            _prevValue: comp.value,
-            calculationType: "FORMULA",
-            formula: comp.formula || defaultWastageFormula,
-          };
-        }
-
-        // restore
-        return {
-          ...comp,
-          calculationType: (comp as any)._prevCalculationType || "PERCENTAGE",
-          value: (comp as any)._prevValue !== undefined ? (comp as any)._prevValue : comp.value || 0,
-        };
-      });
-
-      try {
-        setHasUnsavedChanges(JSON.stringify(updated) !== originalPricingSnapshot);
-      } catch (e) {
-        setHasUnsavedChanges(true);
-      }
-
-      return updated;
-    });
-  };
-
   const handleUnfreezeComponent = (componentKey: string) => {
     if (!selectedSubcategory) return;
     unfreezeSubcategoryComponent({ id: selectedSubcategory._id, componentKey }, {
       onSuccess: () => {
-        toast.success(`Component ${componentKey} unfrozen`);
         refetchPricing();
       },
       onError: (error: any) => {
@@ -396,11 +329,9 @@ const SubcategoryListPage = () => {
 
     createDefaultPricing(selectedSubcategory._id, {
       onSuccess: () => {
-        toast.success("Default pricing configuration created");
         refetchPricing();
       },
       onError: (error) => {
-        toast.error("Failed to create default pricing");
         console.error(error);
       }
     });
@@ -411,14 +342,12 @@ const SubcategoryListPage = () => {
 
     removePricing(selectedSubcategory._id, {
       onSuccess: () => {
-        toast.success("Custom pricing removed, now inheriting from parent");
         setPricingFormData([]);
         setOriginalPricingSnapshot(null);
         setHasUnsavedChanges(false);
         refetchPricing();
       },
       onError: (error) => {
-        toast.error("Failed to remove custom pricing");
         console.error(error);
       }
     });
@@ -427,25 +356,28 @@ const SubcategoryListPage = () => {
   const handleSavePricing = () => {
     if (!selectedSubcategory) return;
 
-    // Sanitize components: remove any internal temporary keys
-    const sanitized = pricingFormData.map((c: any) => {
-      const rest = { ...c };
-      delete rest._prevCalculationType;
-      delete rest._prevValue;
-      // ensure numeric values exist and formula is null when not used
-      return {
-        ...rest,
-        value: rest.value ?? 0,
-        formula: rest.formula ?? null,
-      };
-    });
+    // Sanitize components
+    const sanitized = pricingFormData.map((c: any) => ({
+      componentId: c.componentId,
+      componentKey: c.componentKey,
+      componentName: c.componentName,
+      calculationType: c.calculationType,
+      value: c.value ?? 0,
+      percentageOf: c.percentageOf ?? "metalCost",
+      metalPriceMode: c.metalPriceMode ?? null,
+      manualMetalPrice: c.manualMetalPrice ?? null,
+      isFrozen: c.isFrozen ?? false,
+      frozenValue: c.frozenValue ?? null,
+      isActive: c.isActive ?? true,
+      isVisible: c.isVisible ?? true,
+      sortOrder: c.sortOrder ?? 0,
+    }));
 
     updatePricing({
       id: selectedSubcategory._id,
       components: sanitized
     }, {
       onSuccess: () => {
-        toast.success("Pricing configuration updated");
         // Persist our current local snapshot as the canonical state
         try {
           setOriginalPricingSnapshot(JSON.stringify(sanitized));
@@ -454,90 +386,96 @@ const SubcategoryListPage = () => {
         }
         setHasUnsavedChanges(false);
         refetchPricing();
+        setShowPricingDialog(false);
       },
       onError: (error) => {
-        toast.error("Failed to update pricing configuration");
         console.error(error);
       }
     });
   };
 
-  const handleValidateFormula = (formula: string) => {
-    if (!formula) {
-      setFormulaError(null);
-      return;
-    }
-
-    validateFormula({ formula }, {
-      onSuccess: (result) => {
-        if (result.valid) {
-          setFormulaError(null);
-        } else {
-          setFormulaError(result.errors?.join(", ") || "Invalid formula");
-        }
-      },
-      onError: () => {
-        setFormulaError("Failed to validate formula");
-      }
-    });
-  };
-
-  const evaluateFormulaSafe = (formula: string, context: any) => {
-    if (!formula) return 0;
-    try {
-      // eslint-disable-next-line no-new-func
-      const fn = new Function("grossWeight", "netWeight", "metalRate", "metalCost", "subtotal", `return (${formula});`);
-      const res = fn(context.grossWeight, context.netWeight, context.metalRate, context.metalCost, context.subtotal);
-      return Number(res) || 0;
-    } catch (e) {
-      return 0;
-    }
-  };
-
   const calculateComponentValueLocal = useCallback((component: any, context: any) => {
-    const { grossWeight, netWeight, metalRate, metalCost, subtotal } = context;
+    const { netWeight, metalRate, metalCost, subtotal } = context;
+
+    // Special handling for metal_cost component
+    if (component.componentKey === "metal_cost") {
+      if (component.metalPriceMode === "MANUAL" && component.manualMetalPrice) {
+        return component.manualMetalPrice * netWeight;
+      }
+      return netWeight * metalRate; // AUTO mode
+    }
+
     const type = component.calculationType;
     switch (type) {
       case "PER_GRAM":
-        return netWeight * metalRate * (component.value || 1);
+        return netWeight * (component.value || 1);
       case "PERCENTAGE":
         {
-          let base = metalCost;
-          if (component.percentageOf === "subtotal") base = subtotal;
-          else if (component.percentageOf === "grossWeight") base = grossWeight * metalRate;
-          else if (component.percentageOf === "netWeight") base = netWeight * metalRate;
+          const base = component.percentageOf === "subtotal" ? subtotal : metalCost;
           return (base * (component.value || 0)) / 100;
         }
       case "FIXED":
         return component.value || 0;
-      case "FORMULA":
-        return evaluateFormulaSafe(component.formula || "", context);
       default:
         return 0;
     }
   }, []);
 
-  const computeBreakdown = useCallback((components: any[], gross: number, net: number, rate: number) => {
-    const metalCost = Math.round(net * rate * 100) / 100;
+  const computeBreakdown = useCallback((components: any[], gross: number, net: number, rate: number, isCustomerView = false) => {
     let subtotal = 0;
+    let metalCost = 0;
+    let hiddenValueTotal = 0;
+    let metalCostIndex = -1;
+
     const sorted = [...components].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
     const comps: any[] = [];
     for (const comp of sorted) {
       if (!comp.isActive) continue;
-      let value = comp.isFrozen ? comp.frozenValue : calculateComponentValueLocal(comp, { grossWeight: gross, netWeight: net, metalRate: rate, metalCost, subtotal });
-      value = Math.round(value * 100) / 100;
-      comps.push({ ...comp, value });
-      subtotal += value;
+      let calculatedValue = comp.isFrozen ? comp.frozenValue : calculateComponentValueLocal(comp, { grossWeight: gross, netWeight: net, metalRate: rate, metalCost, subtotal });
+      calculatedValue = Math.round(calculatedValue * 100) / 100;
+
+      // Track metalCost from metal_cost component
+      if (comp.componentKey === "metal_cost") {
+        metalCost = calculatedValue;
+        metalCostIndex = comps.length;
+      }
+
+      // Use calculatedValue instead of overwriting value (preserves original config)
+      comps.push({ ...comp, calculatedValue });
+      subtotal += calculatedValue;
     }
+
+    // Merge hidden components into metal_cost for customer view consistency
+    if (isCustomerView && metalCostIndex !== -1) {
+      for (let i = 0; i < comps.length; i++) {
+        const comp = comps[i];
+        if (comp.componentKey !== "metal_cost" && !comp.isVisible) {
+          hiddenValueTotal += comp.calculatedValue;
+          comp.calculatedValue = 0;
+        }
+      }
+
+      if (hiddenValueTotal > 0) {
+        comps[metalCostIndex].calculatedValue = Math.round((comps[metalCostIndex].calculatedValue + hiddenValueTotal) * 100) / 100;
+        metalCost = comps[metalCostIndex].calculatedValue;
+      }
+    }
+
     subtotal = Math.round(subtotal * 100) / 100;
-    return { components: comps, subtotal, metalCost, metalRate: rate };
+    metalCost = Math.round(metalCost * 100) / 100;
+
+    // For customer view, filter out hidden components (which now have 0 value)
+    const finalComponents = isCustomerView
+      ? comps.filter(c => c.isVisible || c.componentKey === "metal_cost")
+      : comps;
+
+    return { components: finalComponents, subtotal, metalCost, metalRate: rate };
   }, [calculateComponentValueLocal]);
 
   React.useEffect(() => {
     const comps = pricingFormData || [];
-    const admin = computeBreakdown(comps, previewGrossWeight, previewNetWeight, previewMetalRate);
-    const visibleComps = admin.components.filter((c: any) => c.isVisible);
-    const customer = computeBreakdown(visibleComps, previewGrossWeight, previewNetWeight, previewMetalRate);
+    const admin = computeBreakdown(comps, previewGrossWeight, previewNetWeight, previewMetalRate, false);
+    const customer = computeBreakdown(comps, previewGrossWeight, previewNetWeight, previewMetalRate, true);
     setAdminBreakdown(admin);
     setCustomerBreakdown(customer);
   }, [pricingFormData, previewGrossWeight, previewNetWeight, previewMetalRate, computeBreakdown]);
@@ -982,65 +920,100 @@ const SubcategoryListPage = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
+                          {component.componentKey === "metal_cost" ? (
                             <Select
-                              value={component.calculationType}
+                              value={component.metalPriceMode || "AUTO"}
                               onValueChange={(value) =>
-                                handlePricingComponentChange(component.componentKey, "calculationType", value)
+                                handlePricingComponentChange(component.componentKey, "metalPriceMode", value)
                               }
                             >
-                              <SelectTrigger className="w-32">
+                              <SelectTrigger className="w-36">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {calculationTypes.map((type: any) => (
-                                  <SelectItem key={type.value} value={type.value}>
-                                    {type.key}
-                                  </SelectItem>
-                                ))}
+                                <SelectItem value="AUTO">Auto (System Rate)</SelectItem>
+                                <SelectItem value="MANUAL">Manual Price</SelectItem>
                               </SelectContent>
                             </Select>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Select
+                                value={component.calculationType}
+                                onValueChange={(value) =>
+                                  handlePricingComponentChange(component.componentKey, "calculationType", value)
+                                }
+                              >
+                                <SelectTrigger className="w-28">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {calculationTypes.map((type: any) => (
+                                    <SelectItem key={type.value} value={type.value}>
+                                      {type.key}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
 
-                            <Button
-                              size="sm"
-                              variant={component.calculationType === "FORMULA" ? "outline" : "ghost"}
-                              onClick={() => handleToggleAdvanced(component.componentKey)}
-                              aria-label={component.calculationType === "FORMULA" ? "Switch to Simple" : "Switch to Advanced Formula"}
-                            >
-                              {component.calculationType === "FORMULA" ? "Simple" : "Advanced"}
-                            </Button>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {component.calculationType === "FORMULA" ? (
-                            <div className="space-y-2">
-                              <Textarea
-                                value={component.formula || ""}
-                                onChange={(e) => {
-                                  handlePricingComponentChange(component.componentKey, "formula", e.target.value);
-                                  handleValidateFormula(e.target.value);
-                                }}
-                                placeholder="e.g., grossWeight * 0.05"
-                                className="font-mono text-sm min-h-[60px]"
-                              />
-                              {formulaError && (
-                                <p className="text-xs text-red-500">{formulaError}</p>
+                              {component.calculationType === "PERCENTAGE" && (
+                                <Select
+                                  value={component.percentageOf || "metalCost"}
+                                  onValueChange={(value) =>
+                                    handlePricingComponentChange(component.componentKey, "percentageOf", value)
+                                  }
+                                >
+                                  <SelectTrigger className="w-28">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="metalCost">of Metal Cost</SelectItem>
+                                    <SelectItem value="subtotal">of Subtotal</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               )}
                             </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {component.componentKey === "metal_cost" && component.metalPriceMode === "MANUAL" ? (
+                            <div className="flex items-center gap-1">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={component.manualMetalPrice || ""}
+                                onChange={(e) =>
+                                  handlePricingComponentChange(
+                                    component.componentKey,
+                                    "manualMetalPrice",
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                className="w-24"
+                                placeholder="₹/gram"
+                              />
+                              <span className="text-xs text-gray-500">/g</span>
+                            </div>
+                          ) : component.componentKey === "metal_cost" ? (
+                            <span className="text-sm text-gray-500">System Rate</span>
                           ) : (
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={component.value || 0}
-                              onChange={(e) =>
-                                handlePricingComponentChange(
-                                  component.componentKey,
-                                  "value",
-                                  parseFloat(e.target.value) || 0
-                                )
-                              }
-                              className="w-24"
-                            />
+                            <div className="flex items-center gap-1">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={component.value || 0}
+                                onChange={(e) =>
+                                  handlePricingComponentChange(
+                                    component.componentKey,
+                                    "value",
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                className="w-20"
+                              />
+                              <span className="text-xs text-gray-500">
+                                {component.calculationType === "PERCENTAGE" ? "%" : component.calculationType === "FIXED" ? "₹" : "/g"}
+                              </span>
+                            </div>
                           )}
                         </TableCell>
                         <TableCell>
@@ -1129,40 +1102,6 @@ const SubcategoryListPage = () => {
               )}
             </div>
 
-            {/* Formula Helper */}
-            {pricingFormData.some(comp => comp.calculationType === "FORMULA") && (
-              <div className="mt-4 p-3 bg-gray-50 border rounded-lg">
-                <h4 className="text-sm font-medium mb-2">Formula Variables & Operators</h4>
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {formulaVariables.map((variable: any) => (
-                    <Button
-                      key={variable.key}
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        // This would insert the variable into the focused formula field
-                        toast.info(`Variable: ${variable.key}`);
-                      }}
-                    >
-                      {variable.label}
-                    </Button>
-                  ))}
-                  {operators.map((op: string) => (
-                    <Button
-                      key={op}
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        toast.info(`Operator: ${op}`);
-                      }}
-                    >
-                      {op}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Price Breakdown Preview */}
             <div className="mt-6 p-4 border rounded-lg bg-white">
               <h4 className="text-sm font-medium mb-3">Live Price Preview</h4>
@@ -1201,10 +1140,10 @@ const SubcategoryListPage = () => {
                 <div>
                   <h5 className="text-sm font-medium mb-2">Admin View (all components)</h5>
                   <div className="bg-gray-50 p-3 rounded border">
-                    {(adminBreakdown.components as BreakdownComponent[]).map((c) => (
+                    {(adminBreakdown.components as any[]).map((c) => (
                       <div key={c.componentKey} className="flex justify-between text-sm py-1">
                         <span className="text-gray-700">{c.componentName}</span>
-                        <span className="font-mono">₹{c.value.toFixed(2)}</span>
+                        <span className="font-mono">₹{(c.calculatedValue ?? 0).toFixed(2)}</span>
                       </div>
                     ))}
                     <hr className="my-2" />
@@ -1226,10 +1165,10 @@ const SubcategoryListPage = () => {
                 <div>
                   <h5 className="text-sm font-medium mb-2">Customer View (visible components)</h5>
                   <div className="bg-gray-50 p-3 rounded border">
-                    {(customerBreakdown.components as BreakdownComponent[]).map((c) => (
+                    {(customerBreakdown.components as any[]).map((c) => (
                       <div key={c.componentKey} className="flex justify-between text-sm py-1">
                         <span className="text-gray-700">{c.componentName}</span>
-                        <span className="font-mono">₹{c.value.toFixed(2)}</span>
+                        <span className="font-mono">₹{(c.calculatedValue ?? 0).toFixed(2)}</span>
                       </div>
                     ))}
                     <hr className="my-2" />
@@ -1310,15 +1249,13 @@ const SubcategoryListPage = () => {
                   { id: selectedSubcategory._id, componentKey: freezeComponent, reason: freezeReason },
                   {
                     onSuccess: () => {
-                      toast.success(`Component ${freezeComponent} frozen successfully`);
                       setShowFreezeDialog(false);
                       setFreezeReason("");
                       setFreezeComponent("");
                       refetchPricing();
                     },
                     onError: (error: any) => {
-                      const reason = error?.response?.data?.error?.message || error?.message || "Failed to freeze component";
-                      toast.error(reason);
+                      console.error(error);
                     }
                   }
                 );

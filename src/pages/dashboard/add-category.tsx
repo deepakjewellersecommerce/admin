@@ -148,7 +148,6 @@ const AddCategoryPage = () => {
       },
       {
         onSuccess: () => {
-          toast.success("Category created successfully");
           navigate("/dashboard/catalog/categories");
         },
       }

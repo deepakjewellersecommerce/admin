@@ -54,11 +54,9 @@ import {
 import {
   useGetAllComponents,
   useGetCalculationTypes,
-  useGetFormulaVariables,
   useCreateComponent,
   useUpdateComponent,
   useDeleteComponent,
-  useValidateFormula,
 } from "@/lib/react-query/price-component-query";
 import { PriceComponent } from "@/lib/axios/price-component-API";
 
@@ -67,7 +65,6 @@ const PriceComponentsPage = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editItem, setEditItem] = useState<PriceComponent | null>(null);
   const [deleteItem, setDeleteItem] = useState<PriceComponent | null>(null);
-  const [formulaError, setFormulaError] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -77,25 +74,20 @@ const PriceComponentsPage = () => {
     includeInactive: true,
   });
   const { data: calculationTypesData } = useGetCalculationTypes();
-  const { data: formulaVariablesData } = useGetFormulaVariables();
 
   // Mutations
   const { mutate: createComponent, isPending: isCreating } = useCreateComponent();
   const { mutate: updateComponent, isPending: isUpdating } = useUpdateComponent();
   const { mutate: deleteComponent, isPending: isDeleting } = useDeleteComponent();
-  const { mutate: validateFormula, isPending: isValidating } = useValidateFormula();
 
   const components: PriceComponent[] = componentsData?.components || [];
   // calculationTypes comes from API response -> response.data -> { types }
   const calculationTypes = calculationTypesData?.data?.types || [];
-  const formulaVariables = formulaVariablesData?.data?.variables || [];
-  const operators = formulaVariablesData?.data?.operators || ["+", "-", "×", "÷", "(", ")"];
 
   const resetForm = () => {
     setFormData({});
     setEditItem(null);
     setShowAddDialog(false);
-    setFormulaError(null);
   };
 
   const handleAdd = () => {
@@ -119,44 +111,6 @@ const PriceComponentsPage = () => {
   const handleDelete = (component: PriceComponent) => {
     setDeleteItem(component);
     setShowDeleteDialog(true);
-  };
-
-  const handleValidateFormula = () => {
-    if (!formData.formula) return;
-
-    validateFormula(
-      { formula: formData.formula },
-      {
-        onSuccess: (data) => {
-          if (data.valid) {
-            setFormulaError(null);
-          } else {
-            setFormulaError(data.errors?.join(", ") || "Invalid formula");
-          }
-        },
-        onError: () => {
-          setFormulaError("Failed to validate formula");
-        },
-      }
-    );
-  };
-
-  const handleInsertVariable = (variable: string) => {
-    const currentFormula = formData.formula || "";
-    setFormData({
-      ...formData,
-      formula: currentFormula + variable,
-    });
-  };
-
-  const handleInsertOperator = (operator: string) => {
-    const currentFormula = formData.formula || "";
-    // Convert display operators to math operators
-    const mathOperator = operator === "×" ? "*" : operator === "÷" ? "/" : operator;
-    setFormData({
-      ...formData,
-      formula: currentFormula + ` ${mathOperator} `,
-    });
   };
 
   const handleSubmit = () => {
@@ -185,10 +139,9 @@ const PriceComponentsPage = () => {
 
   const getCalculationTypeDescription = (type: string) => {
     const descriptions: Record<string, string> = {
-      PER_GRAM: "netWeight × metalRate × value",
-      PERCENTAGE: "baseValue × (value / 100)",
+      PER_GRAM: "netWeight × value",
+      PERCENTAGE: "base × (value / 100), where base is metalCost or subtotal",
       FIXED: "Fixed amount in rupees",
-      FORMULA: "Custom formula calculation",
     };
     return descriptions[type] || type;
   };
@@ -270,16 +223,19 @@ const PriceComponentsPage = () => {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{component.calculationType}</Badge>
-                      {component.calculationType === "FORMULA" && component.formula && (
-                        <p className="text-xs text-muted-foreground mt-1 font-mono">
-                          {component.formula}
-                        </p>
+                      {component.calculationType === "PERCENTAGE" && component.percentageOf && (
+                        <span className="text-xs text-muted-foreground ml-2">
+                          of {component.percentageOf}
+                        </span>
+                      )}
+                      {component.key === "metal_cost" && component.metalPriceMode && (
+                        <Badge variant="secondary" className="ml-2 text-xs">
+                          {component.metalPriceMode}
+                        </Badge>
                       )}
                     </TableCell>
                     <TableCell>
-                      {component.calculationType === "FORMULA"
-                        ? "-"
-                        : component.calculationType === "PERCENTAGE"
+                      {component.calculationType === "PERCENTAGE"
                         ? `${component.defaultValue}%`
                         : component.calculationType === "FIXED"
                         ? `₹${component.defaultValue}`
@@ -445,75 +401,26 @@ const PriceComponentsPage = () => {
               </div>
             )}
 
-            {formData.calculationType === "FORMULA" && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="formula">Formula *</Label>
-                  <Textarea
-                    id="formula"
-                    value={formData.formula || ""}
-                    onChange={(e) => {
-                      setFormData({ ...formData, formula: e.target.value });
-                      setFormulaError(null);
-                    }}
-                    placeholder="e.g., grossWeight * 50 + netWeight * metalRate * 0.1"
-                    className="font-mono"
-                  />
-                  <div className="flex justify-between items-center">
-                    {formulaError ? (
-                      <p className="text-xs text-destructive">{formulaError}</p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        Use variables and operators below
-                      </p>
-                    )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleValidateFormula}
-                      disabled={isValidating || !formData.formula}
-                    >
-                      {isValidating ? "Validating..." : "Validate"}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Variables</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {formulaVariables.map((v: any) => (
-                      <Button
-                        key={v.key}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleInsertVariable(v.key)}
-                        title={v.description}
-                      >
-                        {v.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Operators</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {operators.map((op: string) => (
-                      <Button
-                        key={op}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleInsertOperator(op)}
-                        className="w-10"
-                      >
-                        {op}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+            {formData.key === "metal_cost" && (
+              <div className="space-y-2">
+                <Label htmlFor="metalPriceMode">Metal Price Mode</Label>
+                <Select
+                  value={formData.metalPriceMode || "AUTO"}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, metalPriceMode: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AUTO">AUTO (System Rate)</SelectItem>
+                    <SelectItem value="MANUAL">MANUAL (Admin Override)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  AUTO uses live system metal rate, MANUAL allows admin to set a custom price
+                </p>
               </div>
             )}
 
@@ -557,7 +464,7 @@ const PriceComponentsPage = () => {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={isCreating || isUpdating || !!formulaError}
+              disabled={isCreating || isUpdating}
             >
               {isCreating || isUpdating
                 ? "Saving..."
@@ -618,18 +525,18 @@ const PriceComponentsPage = () => {
         <AlertDescription className="text-blue-600">
           <ul className="list-disc pl-5 space-y-1 mt-2">
             <li>
-              <strong>PER_GRAM:</strong> Multiplies by net weight and metal rate
+              <strong>PER_GRAM:</strong> Multiplies by net weight (netWeight × value)
             </li>
             <li>
-              <strong>PERCENTAGE:</strong> Calculates as percentage of base value
+              <strong>PERCENTAGE:</strong> Calculates as percentage of metalCost or subtotal
             </li>
             <li>
               <strong>FIXED:</strong> Fixed rupee amount
             </li>
-            <li>
-              <strong>FORMULA:</strong> Custom formula using available variables
-            </li>
           </ul>
+          <p className="mt-2">
+            <strong>Metal Cost Component:</strong> Can be set to AUTO (uses system rate) or MANUAL (admin enters price per gram)
+          </p>
         </AlertDescription>
       </Alert>
     </div>
