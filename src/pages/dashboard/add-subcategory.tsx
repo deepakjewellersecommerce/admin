@@ -15,6 +15,7 @@ import {
   useGetSubcategory,
   useCheckSubcategoryAvailability,
 } from "@/lib/react-query/category-hierarchy-query";
+import { useGetAllMetalPrices } from "@/lib/react-query/metal-price-query";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,7 @@ const AddSubcategoryPage = () => {
 
   // Mutation
   const { mutate: createSubcategory, isPending: isCreating } = useCreateSubcategory();
+  const { data: metalPricesData } = useGetAllMetalPrices();
 
   // Form setup
   const form = useForm<SubcategoryFormData>({
@@ -194,7 +196,22 @@ const AddSubcategoryPage = () => {
   // Update pricing component value
   const updateComponentValue = (index: number, field: string, value: any) => {
     const updated = [...pricingComponents];
-    updated[index] = { ...updated[index], [field]: value };
+    const comp = { ...updated[index] };
+
+    // Auto-fill current metal rate when switching to MANUAL mode
+    if (field === "metalPriceMode" && value === "MANUAL" && !comp.manualMetalPrice) {
+      const metalType = category?.materialId?.metalType || parentSubcategory?.categoryId?.materialId?.metalType;
+      const prices = metalPricesData?.data?.prices || metalPricesData?.prices || [];
+      
+      if (metalType && prices.length > 0) {
+        const metalPrice = prices.find((p: any) => p.metalType === metalType);
+        if (metalPrice) {
+          comp.manualMetalPrice = metalPrice.pricePerGram;
+        }
+      }
+    }
+
+    updated[index] = { ...comp, [field]: value };
     setPricingComponents(updated);
   };
 

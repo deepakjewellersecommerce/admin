@@ -94,9 +94,21 @@ const ProductPricingPage = () => {
   // Handle component changes
   const handleComponentChange = (componentKey: string, field: string, value: any) => {
     setPricingComponents((prev) =>
-      prev.map((comp) =>
-        comp.componentKey === componentKey ? { ...comp, [field]: value } : comp
-      )
+      prev.map((comp) => {
+        if (comp.componentKey === componentKey) {
+          const updated = { ...comp, [field]: value };
+          // Auto-fill current metal rate when switching to MANUAL mode
+          if (field === "metalPriceMode" && value === "MANUAL") {
+            // Only fill if it's currently empty/0 or if we're specifically switching to MANUAL
+            const currentRate = previewMetalRate || 0;
+            if (!updated.manualMetalPrice || updated.manualMetalPrice === 0) {
+              updated.manualMetalPrice = currentRate;
+            }
+          }
+          return updated;
+        }
+        return comp;
+      })
     );
     setHasUnsavedChanges(true);
   };

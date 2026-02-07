@@ -77,6 +77,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import {
   useGetCalculationTypes,
 } from "@/lib/react-query/price-component-query";
+import { useGetAllMetalPrices } from "@/lib/react-query/metal-price-query";
 import { PricingComponent } from "@/lib/axios/category-hierarchy-API";
 
 interface BreakdownComponent {
@@ -137,7 +138,23 @@ const SubcategoryListPage = () => {
   const { data: pricingData, isLoading: isLoadingPricing, refetch: refetchPricing } = useGetSubcategoryPricing(
     selectedSubcategory?._id || ""
   );
+  const { data: metalPricesData } = useGetAllMetalPrices();
   const { data: calculationTypesData } = useGetCalculationTypes();
+
+  // Auto-fill preview metal rate based on category material
+  React.useEffect(() => {
+    if (showPricingDialog && previewMetalRate === 0) {
+      const prices = metalPricesData?.data?.prices || metalPricesData?.prices || [];
+      const metalType = category?.materialId?.metalType;
+      
+      if (metalType && prices.length > 0) {
+        const metalPrice = prices.find((p: any) => p.metalType === metalType);
+        if (metalPrice) {
+          setPreviewMetalRate(metalPrice.pricePerGram);
+        }
+      }
+    }
+  }, [showPricingDialog, metalPricesData, category, previewMetalRate]);
 
   const { mutate: updatePricing, isPending: isUpdatingPricing } = useUpdateSubcategoryPricing();
   const { mutate: createDefaultPricing, isPending: isCreatingDefaultPricing } = useCreateDefaultSubcategoryPricing();
@@ -279,17 +296,37 @@ const SubcategoryListPage = () => {
     // Initialize with current pricing config or empty array
     const currentConfig = pricingData?.data?.pricingConfig?.components || pricingData?.pricingConfig?.components || [];
     setPricingFormData([...currentConfig]);
+
+    // Auto-fill preview metal rate based on category material
+    const prices = metalPricesData?.data?.prices || metalPricesData?.prices || [];
+    if (category?.materialId?.metalType && prices.length > 0) {
+      const metalType = category.materialId.metalType;
+      const metalPrice = prices.find((p: any) => p.metalType === metalType);
+      if (metalPrice) {
+        setPreviewMetalRate(metalPrice.pricePerGram);
+      }
+    }
+
     setShowPricingDialog(true);
   };
 
   // Pricing configuration handlers
   const handlePricingComponentChange = (componentKey: string, field: string, value: any) => {
     setPricingFormData(prev => {
-      const updated = prev.map(comp =>
-        comp.componentKey === componentKey
-          ? { ...comp, [field]: value }
-          : comp
-      );
+      const updated = prev.map(comp => {
+        if (comp.componentKey === componentKey) {
+          const updatedComp = { ...comp, [field]: value };
+          // Auto-fill current metal rate when switching to MANUAL mode
+          if (field === "metalPriceMode" && value === "MANUAL") {
+            // Fill from preview rate if manual price is empty or 0
+            if (!updatedComp.manualMetalPrice || updatedComp.manualMetalPrice === 0) {
+              updatedComp.manualMetalPrice = previewMetalRate || 0;
+            }
+          }
+          return updatedComp;
+        }
+        return comp;
+      });
 
       // Mark unsaved changes by comparing snapshot
       try {

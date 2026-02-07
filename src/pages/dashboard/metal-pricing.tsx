@@ -92,9 +92,21 @@ const MetalPricingDashboard = () => {
   const { mutate: initializePrices, isPending: isInitializing } = useInitializeMetalPrices();
   const { mutate: bulkRecalculate, isPending: isBulkRecalculating } = useBulkRecalculatePrices();
 
-  const prices: MetalPrice[] = metalPricesData?.prices || [];
-  const history: PriceHistory[] = historyData?.history || [];
-  const affectedProducts = affectedData?.products || [];
+  // Sort prices in a logical order: Gold 24K, Gold 22K, Platinum, Silver 999, Silver 925
+  const prices: MetalPrice[] = [...(metalPricesData?.data?.prices || metalPricesData?.prices || [])].sort((a, b) => {
+    const order = ["GOLD_24K", "GOLD_22K", "PLATINUM", "SILVER_999", "SILVER_925"];
+    const indexA = order.indexOf(a.metalType);
+    const indexB = order.indexOf(b.metalType);
+    
+    // If metal type not in order list, put it at the end
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    
+    return indexA - indexB;
+  });
+
+  const history: PriceHistory[] = historyData?.data?.history || historyData?.history || [];
+  const affectedProducts = affectedData?.data?.products || affectedData?.products || [];
 
   // Auto-select first metal if none selected
   useEffect(() => {
@@ -495,9 +507,9 @@ const MetalPricingDashboard = () => {
                         ))}
                       </TableBody>
                     </Table>
-                    {affectedData?.total > 10 && (
+                    {(affectedData?.data?.total || affectedData?.total) > 10 && (
                       <p className="text-sm text-muted-foreground text-center mt-4">
-                        Showing 10 of {affectedData.total} affected products
+                        Showing 10 of {(affectedData?.data?.total || affectedData?.total)} affected products
                       </p>
                     )}
                   </>
