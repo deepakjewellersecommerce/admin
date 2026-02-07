@@ -25,9 +25,9 @@ export interface MetalPrice {
 export interface PriceHistory {
   _id: string;
   metalType: string;
-  pricePerGram: number;
-  previousPrice?: number;
-  changePercent?: number;
+  newPricePerGram: number;
+  oldPricePerGram: number;
+  changePercent: number;
   source: string;
   updatedBy: string;
   reason?: string;

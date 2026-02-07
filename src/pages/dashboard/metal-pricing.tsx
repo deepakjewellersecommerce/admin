@@ -302,9 +302,17 @@ const MetalPricingDashboard = () => {
             >
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${config.color}`} />
-                    <CardTitle className="text-sm font-medium">{config.name}</CardTitle>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${config.color}`} />
+                      <CardTitle className="text-sm font-medium">{config.name}</CardTitle>
+                    </div>
+                    <Badge 
+                      variant={price.source === "API" ? "secondary" : "outline"}
+                      className="text-[10px] px-1.5 py-0 h-4"
+                    >
+                      {price.source === "API" ? "API" : "MANUAL"}
+                    </Badge>
                   </div>
                   {!isEditing && (
                     <Button
@@ -410,7 +418,7 @@ const MetalPricingDashboard = () => {
                         <TableRow key={entry._id}>
                           <TableCell>{formatDate(entry.createdAt)}</TableCell>
                           <TableCell className="font-medium">
-                            {formatCurrency(entry.pricePerGram)}
+                            {formatCurrency(entry.newPricePerGram)}
                           </TableCell>
                           <TableCell>
                             {entry.changePercent !== undefined && (
