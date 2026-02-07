@@ -171,8 +171,9 @@ export const useConfirmBulkRecalculation = () => {
 
   return useMutation({
     mutationFn: (metalTypes: string[]) => metalPriceAPI.confirmBulkRecalculation(metalTypes),
-    onSuccess: (data) => {
-      toast.success(`Bulk recalculation complete! ${data.success} products updated.`);
+    onSuccess: (response: any) => {
+      const data = response.data || response;
+      toast.success(`Bulk recalculation complete! ${data.success || 0} products updated.`);
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["metalPrices"] });
     },

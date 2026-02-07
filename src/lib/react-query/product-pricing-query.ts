@@ -238,9 +238,10 @@ export const useBulkRecalculatePrices = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (metalType: string) => productPricingAPI.bulkRecalculatePrices(metalType),
-    onSuccess: (data) => {
+    onSuccess: (response: any) => {
+      const data = response.data || response;
       toast.success(
-        `Bulk recalculation complete! ${data.success} products updated, ${data.failed} failed.`
+        `Bulk recalculation complete! ${data.success || 0} products updated, ${data.failed || 0} failed.`
       );
       queryClient.invalidateQueries({ queryKey: ["products"] });
     },
