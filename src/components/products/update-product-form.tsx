@@ -97,7 +97,7 @@ const UpdateProductForm = () => {
 
   const { data, isLoading } = useGetCategories();
   const categoryOptions = useMemo(() => {
-    if (data) {
+    if (data && data.data && data.data.categories) {
       const categories = Array.from(data.data.categories)
         .map((category: any) => {
           return {
@@ -119,31 +119,31 @@ const UpdateProductForm = () => {
   });
   useEffect(() => {
     try {
-      const product = productData?.data.data.product;
-      if (productData) {
+      const product = productData?.data?.data?.product || productData?.data?.product;
+      if (product) {
           const formData = {
-          productTitle: product.productTitle,
-          productSlug: product.productSlug,
-          skuNo: product.skuNo,
-          isActive: product.isActive,
-          isFeatured: product.isFeatured,
-          regularPrice: String(product.regularPrice),
-          category: product.category._id,
-          salePrice: String(product.salePrice),
-          productDescription: product.productDescription,
+          productTitle: product.productTitle || "",
+          productSlug: product.productSlug || "",
+          skuNo: product.skuNo || "",
+          isActive: product.isActive ?? true,
+          isFeatured: product.isFeatured ?? false,
+          regularPrice: String(product.regularPrice || 0),
+          category: product.category?._id || product.category || "",
+          salePrice: String(product.salePrice || 0),
+          productDescription: product.productDescription || "",
           careHandling: product.careHandling ?? " ",
-          gst: String(product.gst),
+          gst: String(product.gst || 0),
           // Normalize productImageUrl to a single string for the form UI
           productImageUrl: Array.isArray(product.productImageUrl)
             ? (product.productImageUrl[0] ?? "")
             : (product.productImageUrl ?? ""),
-          brand: product.brand,
+          brand: product.brand || "",
           ingredients: product.ingredients ?? "",
           benefits: product.benefits ?? "",
           shlokText: product.shlok?.shlokText ?? "",
           shlokMeaning: product.shlok?.shlokMeaning ?? "",
           amazonLink: product.amazonLink ?? "",
-          
+
         };
         form.reset(formData);
       }

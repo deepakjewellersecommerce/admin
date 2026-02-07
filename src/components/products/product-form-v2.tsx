@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import {
   useGetAllSubcategoriesFlat,
 } from "@/lib/react-query/category-hierarchy-query";
+import { useGetAllMetalPrices } from "@/lib/react-query/metal-price-query";
 import type { SubcategoryFlat } from "@/lib/axios/category-hierarchy-API";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -130,6 +131,43 @@ const defaultValues: ProductFormData = {
   seoDescription: "",
 };
 
+// Helper function to extract metal type from material
+const extractMetalType = (material: any): string | null => {
+  if (!material) return null;
+
+  // First try direct metalType field
+  if (material.metalType) return material.metalType;
+
+  // Try to derive from idAttribute (e.g., "G22" -> "GOLD_22K")
+  const idAttr = material.idAttribute;
+  if (idAttr) {
+    const mapping: Record<string, string> = {
+      'G24': 'GOLD_24K',
+      'G22': 'GOLD_22K',
+      'S999': 'SILVER_999',
+      'S925': 'SILVER_925',
+      'PT': 'PLATINUM',
+    };
+    if (mapping[idAttr]) return mapping[idAttr];
+  }
+
+  // Try to derive from name (e.g., "Gold(22K)" -> "GOLD_22K")
+  const name = material.name || material.displayName || '';
+  if (name.includes('Gold') || name.includes('GOLD')) {
+    if (name.includes('24')) return 'GOLD_24K';
+    if (name.includes('22')) return 'GOLD_22K';
+  }
+  if (name.includes('Silver') || name.includes('SILVER')) {
+    if (name.includes('999')) return 'SILVER_999';
+    if (name.includes('925')) return 'SILVER_925';
+  }
+  if (name.includes('Platinum') || name.includes('PLATINUM')) {
+    return 'PLATINUM';
+  }
+
+  return null;
+};
+
 const ProductFormV2 = () => {
   const navigate = useNavigate();
   const [pricePreview] = useState<any>(null);
@@ -153,6 +191,7 @@ const ProductFormV2 = () => {
 
   // Fetch flat subcategories for single dropdown
   const { data: subcategoriesData } = useGetAllSubcategoriesFlat();
+  const { data: metalPricesData } = useGetAllMetalPrices();
 
   const { mutate: addProduct, isPending } = useAddProduct();
   const { isPending: isPreviewLoading } = useGetPricePreview();
@@ -167,12 +206,12 @@ const ProductFormV2 = () => {
   }, [subcategoriesData]);
 
   // Get selected subcategory details for display and auto-populating hierarchy
-  const selectedSubcategory = useMemo((): SubcategoryFlat | null => {
+  const selectedSubcategory = useMemo((): any | null => {
     if (!subcategoriesData?.data?.subcategories || !subcategoryId) return null;
-    return subcategoriesData.data.subcategories.find((s: SubcategoryFlat) => s._id === subcategoryId) || null;
+    return subcategoriesData.data.subcategories.find((s: any) => s._id === subcategoryId) || null;
   }, [subcategoriesData, subcategoryId]);
 
-  // Auto-populate hierarchy fields when subcategory is selected
+  // Auto-populate hierarchy fields and handle static price pre-filling
   useEffect(() => {
     if (selectedSubcategory) {
       form.setValue("materialId", selectedSubcategory.materialId || "");
@@ -181,6 +220,27 @@ const ProductFormV2 = () => {
       form.setValue("categoryId", selectedSubcategory.categoryId || "");
     }
   }, [selectedSubcategory, form]);
+
+  // Auto-fill static price with current market value when STATIC_PRICE is selected
+  // Triggers when: mode changes to static, subcategory selected, net weight entered, or metal prices load
+  useEffect(() => {
+    if (pricingMode === "STATIC_PRICE" && selectedSubcategory && netWeight > 0) {
+      const metalType = extractMetalType(selectedSubcategory?.material);
+      const prices = metalPricesData?.data?.prices || metalPricesData?.prices || [];
+
+      if (metalType && prices.length > 0) {
+        const metalPrice = prices.find((p: any) => p.metalType === metalType);
+        if (metalPrice && metalPrice.pricePerGram) {
+          const marketPrice = metalPrice.pricePerGram * netWeight;
+          // Only auto-fill if the static price is currently empty or 0
+          const currentStaticPrice = form.getValues("staticPrice");
+          if (currentStaticPrice === undefined || currentStaticPrice === null || currentStaticPrice === 0) {
+            form.setValue("staticPrice", Math.round(marketPrice), { shouldDirty: true });
+          }
+        }
+      }
+    }
+  }, [pricingMode, selectedSubcategory, netWeight, metalPricesData, form]);
 
   // Auto-generate slug
   useEffect(() => {
@@ -351,7 +411,9 @@ const ProductFormV2 = () => {
                     {selectedSubcategory.material && (
                       <div className="flex items-center gap-2 pt-1">
                         <span className="text-xs text-blue-600">Metal Type:</span>
-                        <Badge variant="secondary">{selectedSubcategory.material.metalType}</Badge>
+                        <Badge variant="secondary">
+                          {extractMetalType(selectedSubcategory.material) || selectedSubcategory.material.name || 'Unknown'}
+                        </Badge>
                         {selectedSubcategory.hasPricingConfig && (
                           <Badge variant="outline" className="text-green-600 border-green-300">Has Pricing</Badge>
                         )}
@@ -589,7 +651,7 @@ const ProductFormV2 = () => {
                 </div>
 
                 {pricingMode === "STATIC_PRICE" && (
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="staticPrice">Static Price (₹)</Label>
                     <Input
                       id="staticPrice"
@@ -598,6 +660,19 @@ const ProductFormV2 = () => {
                       {...form.register("staticPrice", { valueAsNumber: true })}
                       placeholder="Enter fixed price"
                     />
+                    {selectedSubcategory && netWeight > 0 && (() => {
+                      const metalType = extractMetalType(selectedSubcategory?.material);
+                      const prices = metalPricesData?.data?.prices || metalPricesData?.prices || [];
+                      const metalPrice = prices.find((p: any) => p.metalType === metalType);
+                      const suggestedPrice = metalPrice ? Math.round(metalPrice.pricePerGram * netWeight) : 0;
+
+                      return suggestedPrice > 0 ? (
+                        <p className="text-xs text-blue-600">
+                          Suggested market price: ₹{suggestedPrice}
+                          (based on {metalType} rate and {netWeight}g net weight)
+                        </p>
+                      ) : null;
+                    })()}
                     {form.formState.errors.staticPrice && (
                       <p className="text-sm text-red-500 mt-1">{form.formState.errors.staticPrice.message}</p>
                     )}
