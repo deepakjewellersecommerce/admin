@@ -3,7 +3,7 @@
  * Full page form for creating new subcategories with pricing configuration
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -89,7 +89,9 @@ const AddSubcategoryPage = () => {
       description: "",
       weight: undefined,
       isActive: true,
-      pricingMode: "inherit",
+      // First-level subcategories (under category) must configure custom pricing
+      // Nested subcategories (under subcategory) can inherit from parent
+      pricingMode: isNestedView ? "inherit" : "custom",
     },
   });
 
@@ -109,6 +111,88 @@ const AddSubcategoryPage = () => {
   // Get parent info
   const category = categoryData?.data?.category || categoryData?.category;
   const parentSubcategory = parentSubcategoryData?.data?.subcategory || parentSubcategoryData?.subcategory;
+
+  // Auto-fill manual metal prices when metal prices data loads
+  useEffect(() => {
+    console.log("🔄 useEffect triggered for metal price auto-fill");
+
+    // Helper function to extract metal type from material
+    const extractMetalType = (material: any): string | null => {
+      if (!material) return null;
+
+      // First try direct metalType field
+      if (material.metalType) return material.metalType;
+
+      // Try to derive from idAttribute (e.g., "G22" -> "GOLD_22K")
+      const idAttr = material.idAttribute;
+      if (idAttr) {
+        const mapping: Record<string, string> = {
+          'G24': 'GOLD_24K',
+          'G22': 'GOLD_22K',
+          'S999': 'SILVER_999',
+          'S925': 'SILVER_925',
+          'PT': 'PLATINUM',
+        };
+        if (mapping[idAttr]) return mapping[idAttr];
+      }
+
+      // Try to derive from name (e.g., "Gold(22K)" -> "GOLD_22K")
+      const name = material.name || material.displayName || '';
+      if (name.includes('Gold') || name.includes('GOLD')) {
+        if (name.includes('24')) return 'GOLD_24K';
+        if (name.includes('22')) return 'GOLD_22K';
+      }
+      if (name.includes('Silver') || name.includes('SILVER')) {
+        if (name.includes('999')) return 'SILVER_999';
+        if (name.includes('925')) return 'SILVER_925';
+      }
+      if (name.includes('Platinum') || name.includes('PLATINUM')) {
+        return 'PLATINUM';
+      }
+
+      return null;
+    };
+
+    // Get metal type from category or parent subcategory
+    const categoryMaterial = typeof category?.materialId === 'object' ? category.materialId : null;
+    const parentMaterial = typeof parentSubcategory?.materialId === 'object' ? parentSubcategory.materialId : null;
+
+    const metalType = extractMetalType(categoryMaterial) || extractMetalType(parentMaterial);
+
+    console.log("  metalType from useEffect:", metalType);
+
+    const prices = metalPricesData?.data?.prices || metalPricesData?.prices || [];
+    console.log("  prices from useEffect:", prices);
+
+    if (metalType && prices.length > 0) {
+      const metalPrice = prices.find((p: any) => p.metalType === metalType);
+      console.log("  metalPrice from useEffect:", metalPrice);
+
+      if (metalPrice && metalPrice.pricePerGram && metalPrice.pricePerGram > 0) {
+        // Use functional update to avoid stale closure
+        setPricingComponents((currentComponents) => {
+          console.log("  current components:", currentComponents);
+          let needsUpdate = false;
+          const updated = currentComponents.map((comp) => {
+            if (comp.componentKey === "metal_cost" &&
+                comp.metalPriceMode === "MANUAL" &&
+                (!comp.manualMetalPrice || comp.manualMetalPrice === 0)) {
+              console.log("  ✅ useEffect auto-filling component with price:", metalPrice.pricePerGram);
+              needsUpdate = true;
+              return { ...comp, manualMetalPrice: metalPrice.pricePerGram };
+            }
+            return comp;
+          });
+
+          if (!needsUpdate) {
+            console.log("  ℹ️ No update needed - component already has price or not in MANUAL mode");
+          }
+
+          return needsUpdate ? updated : currentComponents;
+        });
+      }
+    }
+  }, [metalPricesData, category, parentSubcategory]);
 
   // Build breadcrumb
   const breadcrumb = useMemo(() => {
@@ -199,15 +283,71 @@ const AddSubcategoryPage = () => {
     const comp = { ...updated[index] };
 
     // Auto-fill current metal rate when switching to MANUAL mode
-    if (field === "metalPriceMode" && value === "MANUAL" && !comp.manualMetalPrice) {
-      const metalType = category?.materialId?.metalType || parentSubcategory?.categoryId?.materialId?.metalType;
+    if (field === "metalPriceMode" && value === "MANUAL") {
+      console.log("🔍 Manual Price selected - debugging auto-fill:");
+      console.log("  category:", category);
+      console.log("  parentSubcategory:", parentSubcategory);
+
+      // Helper function to extract metal type from material
+      const extractMetalType = (material: any): string | null => {
+        if (!material) return null;
+
+        // First try direct metalType field
+        if (material.metalType) return material.metalType;
+
+        // Try to derive from idAttribute (e.g., "G22" -> "GOLD_22K")
+        const idAttr = material.idAttribute;
+        if (idAttr) {
+          const mapping: Record<string, string> = {
+            'G24': 'GOLD_24K',
+            'G22': 'GOLD_22K',
+            'S999': 'SILVER_999',
+            'S925': 'SILVER_925',
+            'PT': 'PLATINUM',
+          };
+          if (mapping[idAttr]) return mapping[idAttr];
+        }
+
+        // Try to derive from name (e.g., "Gold(22K)" -> "GOLD_22K")
+        const name = material.name || material.displayName || '';
+        if (name.includes('Gold') || name.includes('GOLD')) {
+          if (name.includes('24')) return 'GOLD_24K';
+          if (name.includes('22')) return 'GOLD_22K';
+        }
+        if (name.includes('Silver') || name.includes('SILVER')) {
+          if (name.includes('999')) return 'SILVER_999';
+          if (name.includes('925')) return 'SILVER_925';
+        }
+        if (name.includes('Platinum') || name.includes('PLATINUM')) {
+          return 'PLATINUM';
+        }
+
+        return null;
+      };
+
+      // Get metal type from either category or parent subcategory
+      const categoryMaterial = typeof category?.materialId === 'object' ? category.materialId : null;
+      const parentMaterial = typeof parentSubcategory?.materialId === 'object' ? parentSubcategory.materialId : null;
+
+      const metalType = extractMetalType(categoryMaterial) || extractMetalType(parentMaterial);
+
+      console.log("  extracted metalType:", metalType);
+
       const prices = metalPricesData?.data?.prices || metalPricesData?.prices || [];
-      
+      console.log("  available prices:", prices);
+
       if (metalType && prices.length > 0) {
         const metalPrice = prices.find((p: any) => p.metalType === metalType);
-        if (metalPrice) {
+        console.log("  found metalPrice:", metalPrice);
+
+        if (metalPrice && metalPrice.pricePerGram && metalPrice.pricePerGram > 0) {
+          console.log("  ✅ Auto-filling with price:", metalPrice.pricePerGram);
           comp.manualMetalPrice = metalPrice.pricePerGram;
+        } else {
+          console.log("  ❌ metalPrice validation failed");
         }
+      } else {
+        console.log("  ❌ No metalType or empty prices array");
       }
     }
 
@@ -346,26 +486,40 @@ const AddSubcategoryPage = () => {
             <div className="space-y-4">
               <h3 className="font-semibold text-sm text-gray-700 border-b pb-2">Pricing Configuration</h3>
 
+              {/* Show explanation for first-level subcategories */}
+              {!isNestedView && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-sm text-amber-800">
+                    <strong>Note:</strong> Categories don't have pricing configurations.
+                    This first subcategory must configure its own pricing components.
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => form.setValue("pricingMode", "inherit")}
-                  className={`w-full flex items-start space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer text-left transition-colors ${
-                    pricingMode === "inherit" ? "border-blue-500 bg-blue-50" : ""
-                  }`}
-                >
-                  {pricingMode === "inherit" ? (
-                    <CheckCircle2 className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                  )}
-                  <div className="flex-1">
-                    <span className="font-medium block">Inherit from parent</span>
-                    <p className="text-sm text-gray-500">
-                      Use the pricing configuration from "{parentName}"
-                    </p>
-                  </div>
-                </button>
+                {/* Only show "Inherit" option for nested subcategories */}
+                {isNestedView && (
+                  <button
+                    type="button"
+                    onClick={() => form.setValue("pricingMode", "inherit")}
+                    className={`w-full flex items-start space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer text-left transition-colors ${
+                      pricingMode === "inherit" ? "border-blue-500 bg-blue-50" : ""
+                    }`}
+                  >
+                    {pricingMode === "inherit" ? (
+                      <CheckCircle2 className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                    )}
+                    <div className="flex-1">
+                      <span className="font-medium block">Inherit from parent</span>
+                      <p className="text-sm text-gray-500">
+                        Use the pricing configuration from "{parentName}"
+                      </p>
+                    </div>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => form.setValue("pricingMode", "custom")}
@@ -379,9 +533,13 @@ const AddSubcategoryPage = () => {
                     <Circle className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
                   )}
                   <div className="flex-1">
-                    <span className="font-medium block">Configure custom pricing</span>
+                    <span className="font-medium block">
+                      {isNestedView ? "Configure custom pricing" : "Configure pricing"}
+                    </span>
                     <p className="text-sm text-gray-500">
-                      Set up custom pricing components for this subcategory
+                      {isNestedView
+                        ? "Set up custom pricing components for this subcategory"
+                        : "Set up pricing components for this subcategory"}
                     </p>
                   </div>
                 </button>

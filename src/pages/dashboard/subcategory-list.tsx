@@ -129,6 +129,10 @@ const SubcategoryListPage = () => {
     parentSubcategoryId: subId || null,
   });
 
+  // Extract data early to avoid TDZ issues with hooks
+  const category = categoryData?.data?.category || categoryData?.category;
+  const parentSubcategory = parentSubcategoryData?.data?.subcategory || parentSubcategoryData?.subcategory;
+
   // Impact query for edit confirmation
   const { data: impactData, isLoading: isLoadingImpact } = useGetSubcategoryImpact(
     editSubcategory?._id || ""
@@ -145,7 +149,9 @@ const SubcategoryListPage = () => {
   React.useEffect(() => {
     if (showPricingDialog && previewMetalRate === 0) {
       const prices = metalPricesData?.data?.prices || metalPricesData?.prices || [];
-      const metalType = category?.materialId?.metalType;
+      const metalType = 
+        (typeof category?.materialId === 'object' ? category.materialId.metalType : null) || 
+        category?.materialId?.metalType;
       
       if (metalType && prices.length > 0) {
         const metalPrice = prices.find((p: any) => p.metalType === metalType);
@@ -236,10 +242,6 @@ const SubcategoryListPage = () => {
     setEditSubcategory(null);
     setFormData({});
   };
-
-  // Get parent info for display
-  const category = categoryData?.data?.category || categoryData?.category;
-  const parentSubcategory = parentSubcategoryData?.data?.subcategory || parentSubcategoryData?.subcategory;
 
   // Get subcategories list
   const subcategories = useMemo(() => {
