@@ -53,6 +53,11 @@ import {
   AddSubcategoryPage,
   CategoryHierarchyPage,
   ProductPricingPage,
+  DashboardKPIsPage,
+  AnalyticsInventoryPage,
+  AnalyticsCustomersPage,
+  AnalyticsOrdersPage,
+  AnalyticsFinancialPage,
 } from "./elements";
 import ProductRatingList from "@/components/product-rating/product-rating-list";
 import UpdateRatingForm from "@/components/review/update-review-form";
@@ -101,6 +106,27 @@ export default function Router() {
               <DashboardAppPage />
             </GuestGuard>
           ),
+        },
+        // Analytics Routes
+        {
+          path: "analytics/kpis",
+          element: <DashboardKPIsPage />,
+        },
+        {
+          path: "analytics/orders",
+          element: <AnalyticsOrdersPage />,
+        },
+        {
+          path: "analytics/customers",
+          element: <AnalyticsCustomersPage />,
+        },
+        {
+          path: "analytics/inventory",
+          element: <AnalyticsInventoryPage />,
+        },
+        {
+          path: "analytics/financial",
+          element: <AnalyticsFinancialPage />,
         },
         {
           path: "coupons/list",

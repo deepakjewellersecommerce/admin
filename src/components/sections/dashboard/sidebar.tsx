@@ -1,154 +1,165 @@
 import Logo from "@/components/common/logo";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Button, buttonVariants } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { PropsWithClassName } from "@/types";
-import { DashboardIcon } from "@radix-ui/react-icons";
 import {
+  BarChart3,
   Box,
+  ChevronDown,
   Coins,
-  GalleryVertical,
   Gift,
   Layers,
-  // Paintbrush2,
   PenBox,
+  Receipt,
   Settings2,
+  ShoppingCart,
   TicketIcon,
+  TrendingUp,
   Users,
+  PackageSearch,
+  UsersRound,
+  GalleryVertical,
+  Rocket,
 } from "lucide-react";
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
-type Tab = {
+type NavItem = {
   label: string;
   icon?: any;
   href: string;
-  subMenu?: Tab[];
 };
 
-const Navbar: Tab[] = [
-  {
-    label: "Dashboard",
-    icon: DashboardIcon,
-    href: "/",
-  },
-  {
-    label: "Web Settings",
-    icon: Settings2,
-    href: "/settings/web",
-  },
-  {
-    label: "Metal Pricing",
-    icon: Coins,
-    href: "/pricing/metals",
-  },
-  {
-    label: "Categories",
-    icon: Layers,
-    href: "/catalog/categories",
-  },
-  {
-    label: "Banner List",
-    icon: GalleryVertical,
-    href: "/banners/list",
-  },
-  // {
-  //   label: "Brand List",
-  //   icon: BoxIcon,
-  //   href: "/brands/list",
-  // },
-  // Old category management - replaced by Catalog > Categories
-  // {
-  //   label: "Category",
-  //   icon: Grid,
-  //   href: "/categories",
-  //   subMenu: [
-  //     { label: "Add New Category", href: "/categories/add" },
-  //     { label: "Category List", href: "/categories/list" },
-  //   ],
-  // },
-  {
-    label: "Products",
-    icon: Box,
-    href: "/products",
-    subMenu: [
-      { label: "Add Product", href: "/products/add" },
-      { label: "Product List", href: "/products/list" },
-      // { label: "Upload Products", href: "/products/upload" },
-      // { label: "Upload Varients", href: "/products/varients" },
-    ],
-  },
-  {
-    label: "Coupons",
-    icon: TicketIcon,
-    href: "/coupons",
-    subMenu: [
-      { label: "Add Coupon", href: "/coupons/add" },
-      { label: "Coupon List", href: "/coupons/list" },
-    ],
-  },
-  // {
-  //   label: "Colors",
-  //   icon: Paintbrush2,
-  //   href: "/colors",
-  //   subMenu: [
-  //     { label: "Add Color", href: "/colors/add" },
-  //     { label: "Color List", href: "/colors/list" },
-  //   ],
-  // },
-  {
-    label: "Orders",
-    icon: Box,
-    href: "/orders/all",
-    subMenu: [
-      { label: "All Orders", href: "/orders/list" },
-      // { label: "Cancel Order", href: "/orders/cancel" },
-    ],
-  },
-  {
-    label: "Customers",
-    icon: Users,
-    href: "/users",
-    subMenu: [{ label: "Customer List", href: "/users/list" }],
-  },
-  {
-    label: "Loyalty",
-    icon: Gift,
-    href: "/loyalty",
-    subMenu: [
-      { label: "Loyalty Members", href: "/loyalty/users" },
-      { label: "Program Settings", href: "/loyalty/settings" },
-    ],
-  },
-  {
-    label: "Blog",
-    icon: PenBox,
-    href: "/blogs",
-    subMenu: [
-      { label: "Add Blog", href: "/blogs/add" },
-      { label: "Blog List", href: "/blogs/list" },
-    ],
-  },
+type NavGroup = {
+  label: string;
+  icon: any;
+  items: NavItem[];
+};
+
+// Dashboard group with analytics sub-pages
+const dashboardGroup: NavGroup = {
+  label: "Dashboard",
+  icon: BarChart3,
+  items: [
+    { label: "Overview", icon: TrendingUp, href: "/" },
+    { label: "KPIs & Alerts", icon: Rocket, href: "/analytics/kpis" },
+    { label: "Orders & Revenue", icon: ShoppingCart, href: "/analytics/orders" },
+    { label: "Customers", icon: UsersRound, href: "/analytics/customers" },
+    { label: "Inventory", icon: PackageSearch, href: "/analytics/inventory" },
+    { label: "Financial", icon: Receipt, href: "/analytics/financial" },
+  ],
+};
+
+// Standalone nav items
+const standaloneItems: NavItem[] = [
+  { label: "Users", icon: Users, href: "/users/list" },
+  { label: "Orders", icon: ShoppingCart, href: "/orders/list" },
+  { label: "Products", icon: Box, href: "/products/list" },
+  { label: "Categories", icon: Layers, href: "/catalog/categories" },
+  { label: "Banners", icon: GalleryVertical, href: "/banners/list" },
+  { label: "Coupons", icon: TicketIcon, href: "/coupons/list" },
+  { label: "Metal Pricing", icon: Coins, href: "/pricing/metals" },
+  { label: "Blog", icon: PenBox, href: "/blogs/list" },
+  { label: "Settings", icon: Settings2, href: "/settings/web" },
 ];
 
 const Sidebar = ({ className }: PropsWithClassName) => {
+  const location = useLocation();
+  const [dashboardOpen, setDashboardOpen] = useState(() => {
+    // Open by default if on dashboard overview or any analytics page
+    return location.pathname === "/dashboard" || location.pathname === "/dashboard/";
+  });
+
+  const isItemActive = (href: string) => {
+    const fullPath = `/dashboard${href}`;
+    return location.pathname === fullPath || location.pathname === fullPath + "/";
+  };
+
+  const isDashboardSectionActive = dashboardGroup.items.some((item) =>
+    isItemActive(item.href)
+  );
+
   return (
     <aside className={cn("bg-white", className)}>
-      <ScrollArea className="h-screen px-3 py-4">
-        <span className="block px-4">
-          <Logo className="text-primary" />
-        </span>
-        <div className="mt-8 grid gap-1">
-          <Accordion className=" grid gap-1" type="single" collapsible>
-            {Navbar.map((tab, i) => (
-              <TabButton key={i} tab={tab} />
-            ))}
-          </Accordion>
+      <ScrollArea className="h-screen py-6">
+        {/* Logo */}
+        <div className="px-6 mb-8">
+          <Logo className="text-primary" thickness="thick" />
+        </div>
+
+        {/* Dashboard Group */}
+        <div className="px-3">
+          <button
+            onClick={() => setDashboardOpen(!dashboardOpen)}
+            className={cn(
+              "flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors",
+              isDashboardSectionActive || dashboardOpen
+                ? "text-gray-900"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <BarChart3 size={20} />
+              <span>Dashboard</span>
+            </div>
+            <ChevronDown
+              size={16}
+              className={cn(
+                "transition-transform duration-200",
+                dashboardOpen ? "rotate-180" : ""
+              )}
+            />
+          </button>
+
+          {dashboardOpen && (
+            <div className="mt-1 ml-4 space-y-0.5">
+              {dashboardGroup.items.map((item) => {
+                const active = isItemActive(item.href);
+                const Icon = item.icon;
+                return (
+                  <Link key={item.href} to={`/dashboard${item.href}`}>
+                    <div
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                        active
+                          ? "bg-gray-100 text-gray-900 font-medium"
+                          : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                      )}
+                    >
+                      {Icon && <Icon size={18} />}
+                      <span>{item.label}</span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Separator */}
+        <div className="mx-6 my-4 border-t border-gray-100" />
+
+        {/* Standalone Items */}
+        <div className="px-3 space-y-0.5">
+          {standaloneItems.map((item) => {
+            const active = isItemActive(item.href);
+            const Icon = item.icon;
+            return (
+              <Link key={item.label} to={`/dashboard${item.href}`}>
+                <div
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
+                    active
+                      ? "bg-gray-100 text-gray-900 font-semibold"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  )}
+                >
+                  <Icon size={20} />
+                  <span>{item.label}</span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </ScrollArea>
     </aside>
@@ -156,82 +167,3 @@ const Sidebar = ({ className }: PropsWithClassName) => {
 };
 
 export default Sidebar;
-
-type TabButtonProps = {
-  tab: Tab;
-} & PropsWithClassName;
-const TabButton = ({ className, tab }: TabButtonProps) => {
-  let isActive = false;
-  const location = useLocation();
-  location.pathname === tab.href ? (isActive = true) : (isActive = false);
-  const activeStyles = isActive
-    ? " text-gray-800  active-sidebar-link shadow group group-active"
-    : "";
-
-  if (tab.subMenu)
-    return (
-      <>
-        <AccordionItem className="border-none w-full" value={tab.href}>
-          <AccordionTrigger
-            className={cn(
-              "flex text-gray-600 w-full font-semibold  rounded-md h-11 justify-start",
-              activeStyles,
-              buttonVariants({ variant: "ghost" }),
-              className
-            )}
-          >
-            <div className="flex mr-auto space-x-4">
-              <tab.icon size={20} />
-              <span className="font-medium tracking-wide text-[15px]">
-                {tab.label}
-              </span>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent asChild>
-            <div className="flex flex-col  bg-gray-100 rounded-sm">
-              {tab.subMenu.map((tab, i) => (
-                <Link
-                  to={`/dashboard${tab.href}`}
-                  className="flex justify-center"
-                  key={i}
-                >
-                  <Button
-                    variant={"ghost"}
-                    className={cn(
-                      "flex text-gray-600  hover:bg-gray-200 md:px-14 px-8 w-full font-semibold -mx-2 rounded-md h-11 justify-start",
-                      activeStyles,
-                      className
-                    )}
-                  >
-                    <span className=" tracking-wide text-sm font-semibold">
-                      {tab.label}
-                    </span>
-                  </Button>{" "}
-                </Link>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </>
-    );
-
-  return (
-    <Link to={`/dashboard${tab.href}`} className="w-full">
-      <Button
-        variant={"ghost"}
-        className={cn(
-          "flex text-gray-600 w-full font-semibold  rounded-md h-11 justify-start",
-          activeStyles,
-          className
-        )}
-      >
-        <div className="flex  items-center space-x-4">
-          <tab.icon size={20} />
-          <span className="font-medium tracking-wide text-[15px]">
-            {tab.label}
-          </span>
-        </div>
-      </Button>
-    </Link>
-  );
-};
