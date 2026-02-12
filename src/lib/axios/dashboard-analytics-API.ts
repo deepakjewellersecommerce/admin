@@ -19,4 +19,36 @@ export const dashboardAnalyticsAPI = {
     instance.get('/admin/dashboard/stock-out-orders'),
   getPricingErrorsDetails: () =>
     instance.get('/admin/dashboard/pricing-errors'),
+  getTopProducts: (params?: { startDate?: string; endDate?: string }) =>
+    instance.get('/admin/dashboard/analytics/top-products', { params }),
+  getTopCategories: (params?: { startDate?: string; endDate?: string }) =>
+    instance.get('/admin/dashboard/analytics/top-categories', { params }),
+  getTopUsers: (params?: { startDate?: string; endDate?: string }) =>
+    instance.get('/admin/dashboard/analytics/top-users', { params }),
+  getTopLocations: (params?: { startDate?: string; endDate?: string }) =>
+    instance.get('/admin/dashboard/analytics/top-locations', { params }),
+  getRevenueTrends: (params?: { startDate?: string; endDate?: string; groupBy?: string }) =>
+    instance.get('/admin/dashboard/analytics/revenue-trends', { params }),
+  getRepeatPurchaseRate: (params?: { startDate?: string; endDate?: string }) =>
+    instance.get('/admin/dashboard/analytics/repeat-purchase-rate', { params }),
+  getStockTurnover: () =>
+    instance.get('/admin/dashboard/analytics/stock-turnover'),
+  getCategoryDistribution: (params?: { materialId?: string; genderId?: string; itemId?: string; categoryId?: string; groupBy?: string }) =>
+    instance.get('/admin/dashboard/analytics/category-distribution', { params }),
+  getTaxSummary: (params?: { startDate?: string; endDate?: string }) =>
+    instance.get('/admin/dashboard/analytics/tax-summary', { params }),
+  getCouponAnalytics: (params?: { startDate?: string; endDate?: string }) =>
+    instance.get('/admin/dashboard/analytics/coupon-analytics', { params }),
+  getLoyaltyLiability: (params?: { startDate?: string; endDate?: string }) =>
+    instance.get('/admin/dashboard/analytics/loyalty-liability', { params }),
+  getFinancialSummary: (params?: { startDate?: string; endDate?: string }) =>
+    instance.get('/admin/dashboard/analytics/financial-summary', { params }),
+  exportFinancialData: (params?: { startDate?: string; endDate?: string }) =>
+    instance.get('/admin/dashboard/export', { params, responseType: 'blob' }),
+  getPaymentReconciliation: (params?: { startDate?: string; endDate?: string }) =>
+    instance.get('/admin/dashboard/analytics/payment-reconciliation', { params }),
+  getInventoryValuationTrend: () =>
+    instance.get('/admin/dashboard/analytics/inventory-valuation-trend'),
+  getCustomerCohorts: () =>
+    instance.get('/admin/dashboard/analytics/customer-cohorts'),
 };

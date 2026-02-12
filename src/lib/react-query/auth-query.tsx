@@ -185,10 +185,10 @@ export const useLogout = () => {
   });
 };
 
-export const useDashboardData = () => {
+export const useDashboardData = (params?: { startDate?: string; endDate?: string }) => {
   return useQuery({
-    queryKey: ["dashboard-data"],
-    queryFn: authAPI.getDashboardData,
+    queryKey: ["dashboard-data", params],
+    queryFn: () => authAPI.getDashboardData(params),
     staleTime: 60 * 5,
   });
 };

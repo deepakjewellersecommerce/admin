@@ -13,7 +13,8 @@ export const authAPI = {
     });
   },
   getUser: () => instance.get('/user/current'),
-  getDashboardData: () => instance.get('/admin/dashboard'),
+  getDashboardData: (params?: { startDate?: string; endDate?: string }) =>
+    instance.get('/admin/dashboard', { params }),
   getConstants: () => instance.get('/user/constants'),
   updateConstants: (payload: unknown) => instance.post('/user/constants', payload),
   logoutUser: () => instance.get('/logout'),

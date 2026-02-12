@@ -1,5 +1,5 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { dashboardAnalyticsAPI } from "../axios/dashboard-analytics-API";
 
 export const useDashboardKPIs = () => {
@@ -98,5 +98,179 @@ export const useOrderFunnel = (params?: { startDate?: string; endDate?: string }
       return response.data?.data;
     },
     staleTime: 60 * 5,
+  });
+};
+
+export const useTopProducts = (params?: { startDate?: string; endDate?: string }) => {
+  return useQuery({
+    queryKey: ["top-products", params],
+    queryFn: async () => {
+      const response = await dashboardAnalyticsAPI.getTopProducts(params);
+      return response.data?.data;
+    },
+    staleTime: 60 * 5,
+  });
+};
+
+export const useTopCategories = (params?: { startDate?: string; endDate?: string }) => {
+  return useQuery({
+    queryKey: ["top-categories", params],
+    queryFn: async () => {
+      const response = await dashboardAnalyticsAPI.getTopCategories(params);
+      return response.data?.data;
+    },
+    staleTime: 60 * 5,
+  });
+};
+
+export const useTopUsers = (params?: { startDate?: string; endDate?: string }) => {
+  return useQuery({
+    queryKey: ["top-users", params],
+    queryFn: async () => {
+      const response = await dashboardAnalyticsAPI.getTopUsers(params);
+      return response.data?.data;
+    },
+    staleTime: 60 * 5,
+  });
+};
+
+export const useTopLocations = (params?: { startDate?: string; endDate?: string }) => {
+  return useQuery({
+    queryKey: ["top-locations", params],
+    queryFn: async () => {
+      const response = await dashboardAnalyticsAPI.getTopLocations(params);
+      return response.data?.data;
+    },
+    staleTime: 60 * 5,
+  });
+};
+
+export const useRevenueTrends = (params?: { startDate?: string; endDate?: string; groupBy?: string }) => {
+  return useQuery({
+    queryKey: ["revenue-trends", params],
+    queryFn: async () => {
+      const response = await dashboardAnalyticsAPI.getRevenueTrends(params);
+      return response.data?.data;
+    },
+    staleTime: 60 * 5,
+  });
+};
+
+export const useRepeatPurchaseRate = (params?: { startDate?: string; endDate?: string }) => {
+  return useQuery({
+    queryKey: ["repeat-purchase-rate", params],
+    queryFn: async () => {
+      const response = await dashboardAnalyticsAPI.getRepeatPurchaseRate(params);
+      return response.data?.data;
+    },
+    staleTime: 60 * 5,
+  });
+};
+
+export const useStockTurnover = () => {
+  return useQuery({
+    queryKey: ["stock-turnover"],
+    queryFn: async () => {
+      const response = await dashboardAnalyticsAPI.getStockTurnover();
+      return response.data?.data;
+    },
+    staleTime: 60 * 5,
+  });
+};
+
+export const useCategoryDistribution = (params?: { materialId?: string; genderId?: string; itemId?: string; categoryId?: string; groupBy?: string }) => {
+  return useQuery({
+    queryKey: ["category-distribution", params],
+    queryFn: async () => {
+      const response = await dashboardAnalyticsAPI.getCategoryDistribution(params);
+      return response.data?.data;
+    },
+    staleTime: 60 * 5,
+  });
+};
+
+export const useTaxSummary = (params?: { startDate?: string; endDate?: string }) => {
+  return useQuery({
+    queryKey: ["tax-summary", params],
+    queryFn: async () => {
+      const response = await dashboardAnalyticsAPI.getTaxSummary(params);
+      return response.data?.data;
+    },
+    staleTime: 60 * 5,
+  });
+};
+
+export const useCouponAnalytics = (params?: { startDate?: string; endDate?: string }) => {
+  return useQuery({
+    queryKey: ["coupon-analytics", params],
+    queryFn: async () => {
+      const response = await dashboardAnalyticsAPI.getCouponAnalytics(params);
+      return response.data?.data;
+    },
+    staleTime: 60 * 5,
+  });
+};
+
+export const useLoyaltyLiability = (params?: { startDate?: string; endDate?: string }) => {
+  return useQuery({
+    queryKey: ["loyalty-liability", params],
+    queryFn: async () => {
+      const response = await dashboardAnalyticsAPI.getLoyaltyLiability(params);
+      return response.data?.data;
+    },
+    staleTime: 60 * 5,
+  });
+};
+
+export const useFinancialSummary = (params?: { startDate?: string; endDate?: string }) => {
+  return useQuery({
+    queryKey: ["financial-summary", params],
+    queryFn: async () => {
+      const response = await dashboardAnalyticsAPI.getFinancialSummary(params);
+      return response.data?.data;
+    },
+    staleTime: 60 * 5,
+  });
+};
+
+export const useExportFinancialData = () => {
+  return useMutation({
+    mutationFn: async (params?: { startDate?: string; endDate?: string }) => {
+      const response = await dashboardAnalyticsAPI.exportFinancialData(params);
+      return response.data;
+    },
+  });
+};
+
+export const usePaymentReconciliation = (params?: { startDate?: string; endDate?: string }) => {
+  return useQuery({
+    queryKey: ["payment-reconciliation", params],
+    queryFn: async () => {
+      const response = await dashboardAnalyticsAPI.getPaymentReconciliation(params);
+      return response.data?.data;
+    },
+    staleTime: 60 * 5,
+  });
+};
+
+export const useInventoryValuationTrend = () => {
+  return useQuery({
+    queryKey: ["inventory-valuation-trend"],
+    queryFn: async () => {
+      const response = await dashboardAnalyticsAPI.getInventoryValuationTrend();
+      return response.data?.data;
+    },
+    staleTime: 60 * 10,
+  });
+};
+
+export const useCustomerCohorts = () => {
+  return useQuery({
+    queryKey: ["customer-cohorts"],
+    queryFn: async () => {
+      const response = await dashboardAnalyticsAPI.getCustomerCohorts();
+      return response.data?.data;
+    },
+    staleTime: 60 * 10,
   });
 };
