@@ -37,7 +37,7 @@ const metalConfig: Record<string, { color: string; bgColor: string; icon: string
 
 const MetalPriceDashboard = () => {
   const { data: metalGroupsData, isLoading, refetch, isRefetching } = useGetAllMetalGroups();
-  const metalGroups = metalGroupsData?.metalGroups || [];
+  const metalGroups = metalGroupsData?.data?.metalGroups || metalGroupsData?.metalGroups || [];
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {

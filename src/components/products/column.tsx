@@ -8,60 +8,98 @@ import { useDeleteProduct } from "@/lib/react-query/product-query";
 import { Badge } from "../ui/badge";
 import { useNavigate } from "react-router-dom";
 
+const formatINR = (n: number) =>
+  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+
 export const ProductColumns: ColumnDef<Product>[] = [
   {
     accessorKey: "productImageUrl",
-    header: "Image URL",
-    cell: ({ row }) => (
-      <div className="items-center flex justify-center">
+    header: "",
+    size: 64,
+    cell: ({ row }) => {
+      const src = Array.isArray(row.original.productImageUrl)
+        ? row.original.productImageUrl[0]
+        : row.original.productImageUrl || "/images/placeholder.jpg";
+      return (
         <img
-          src={
-            Array.isArray(row.original.productImageUrl)
-              ? row.original.productImageUrl[0]
-              : row.original.productImageUrl || "/images/placeholder.jpg"
-          }
+          src={src}
           alt={row.original.productTitle}
-          className="w-16 h-16 bg-gray-50"
+          className="w-12 h-12 rounded-md object-cover bg-gray-100"
         />
-      </div>
-    ),
+      );
+    },
   },
   {
     accessorKey: "productTitle",
-    header: "Product Title",
+    header: "Product",
     cell: ({ row }) => (
-      <div className="whitespace-nowrap font-semibold ">
-        {row.original.productTitle}
+      <div className="min-w-[180px]">
+        <div className="font-medium text-sm leading-tight">
+          {row.original.productTitle}
+        </div>
+        <div className="text-xs text-muted-foreground mt-0.5 font-mono">
+          SKU #{row.original.skuNo}
+        </div>
       </div>
     ),
   },
   {
-    accessorKey: "productSlug",
-    header: "Product Slug",
-    cell: ({ row }) => (
-      <div className="whitespace-nowrap text-sm font-medium text-gray-500 ">
-        {row.original.productSlug}
-      </div>
-    ),
+    accessorKey: "category",
+    header: "Category",
+    cell: ({ row }) => {
+      const category: any = row.original.category;
+      return (
+        <span className="text-sm text-muted-foreground">
+          {category?.name ?? "—"}
+        </span>
+      );
+    },
   },
   {
-    accessorKey: "skuNo",
-    header: "SKU Number",
+    accessorKey: "regularPrice",
+    header: "Price",
+    cell: ({ row }) => {
+      const regular = row.original.regularPrice;
+      const sale = row.original.salePrice;
+      const hasDiscount = sale && sale < regular;
+      return (
+        <div className="text-right tabular-nums">
+          <div className="text-sm font-medium">
+            {formatINR(hasDiscount ? sale : regular)}
+          </div>
+          {hasDiscount && (
+            <div className="text-xs text-muted-foreground line-through">
+              {formatINR(regular)}
+            </div>
+          )}
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "gst",
+    header: "GST",
     cell: ({ row }) => (
-      <div className="whitespace-nowrap text-sm font-medium text-gray-500 text-center">
-        #{row.original.skuNo}
-      </div>
+      <span className="text-sm text-muted-foreground tabular-nums">
+        {row.original.gst}%
+      </span>
     ),
   },
   {
     accessorKey: "isActive",
-    header: "Is Active",
+    header: "Status",
     cell: ({ row }) => {
-      const isActive: any = row.original.isActive;
-      // console.log(isActive);
+      const isActive = row.original.isActive;
       return (
-        <Badge variant={!isActive ? "destructive" : "default"}>
-          {isActive ? "Active" : "Deleted"}
+        <Badge
+          className={
+            isActive
+              ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50 shadow-none"
+              : "bg-red-50 text-red-700 border-red-200 hover:bg-red-50 shadow-none"
+          }
+          variant="outline"
+        >
+          {isActive ? "Active" : "Inactive"}
         </Badge>
       );
     },
@@ -70,110 +108,21 @@ export const ProductColumns: ColumnDef<Product>[] = [
     accessorKey: "isFeatured",
     header: "Featured",
     cell: ({ row }) => {
-      const isFeatured: any = row.original.isFeatured;
-      return (
-        <Badge variant={isFeatured ? "default" : "secondary"}>
-          {isFeatured ? "Yes" : "No"}
+      const isFeatured = row.original.isFeatured;
+      return isFeatured ? (
+        <Badge className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50 shadow-none" variant="outline">
+          Featured
         </Badge>
+      ) : (
+        <span className="text-xs text-muted-foreground">—</span>
       );
     },
   },
   {
-    accessorKey: "category",
-    header: "Category",
-    cell: ({ row }) => {
-      const category: any = row.original.category;
-      return (
-        <div className="whitespace-nowrap text-sm font-medium text-gray-500 ">
-          {category?.name ?? "-"}
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "regularPrice",
-    header: "Regular Price",
-    cell: ({ row }) => (
-      <div className="text-center">
-        {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(row.original.regularPrice)}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "salePrice",
-    header: "Sale Price",
-    cell: ({ row }) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(row.original.salePrice),
-  },
-  {
-    accessorKey: "productDescription",
-    header: "Description",
-    cell: ({ row }) => (
-      <div
-        dangerouslySetInnerHTML={{ __html: row.original.productDescription }}
-        className="truncate w-48 "
-      />
-    ),
-  },
-  {
-    accessorKey: "gst",
-    header: "GST",
-    cell: ({ row }) => `${row.original.gst}%`,
-  },
-  // {
-  //   accessorKey: "ingredients",
-  //   header: "Ingredients",
-  //   cell: ({ row }) => {
-  //     const stripHtml = (html: string) => {
-  //       const tmp = document.createElement("DIV");
-  //       tmp.innerHTML = html;
-  //       return tmp.textContent || tmp.innerText || "";
-  //     };
-  //     const plainText = row.original.ingredients ? stripHtml(row.original.ingredients) : "";
-  //     return (
-  //       <div className="truncate w-48 text-sm">
-  //         {plainText || "-"}
-  //       </div>
-  //     );
-  //   },
-  // },
-  // {
-  //   accessorKey: "benefits",
-  //   header: "Benefits",
-  //   cell: ({ row }) => {
-  //     const stripHtml = (html: string) => {
-  //       const tmp = document.createElement("DIV");
-  //       tmp.innerHTML = html;
-  //       return tmp.textContent || tmp.innerText || "";
-  //     };
-  //     const plainText = row.original.benefits ? stripHtml(row.original.benefits) : "";
-  //     return (
-  //       <div className="truncate w-48 text-sm">
-  //         {plainText || "-"}
-  //       </div>
-  //     );
-  //   },
-  // },
-  // {
-  //   accessorKey: "shlok",
-  //   header: "Shlok",
-  //   cell: ({ row }) => {
-  //     const shlok = row.original.shlok;
-  //     if (shlok?.shlokText || shlok?.shlokMeaning) {
-  //       return (
-  //         <div className="text-sm">
-  //           <div className="truncate w-32">{shlok.shlokText ? "Text: ✓" : ""}</div>
-  //           <div className="truncate w-32">{shlok.shlokMeaning ? "Meaning: ✓" : ""}</div>
-  //         </div>
-  //       );
-  //     }
-  //     return <div className="text-sm text-gray-400">-</div>;
-  //   },
-  // },
-  {
-    accessorKey: "actions",
-    cell: ({ row }) => (
-      <ActionButtons id={row.original._id} />
-    ),
+    id: "actions",
+    header: "",
+    size: 120,
+    cell: ({ row }) => <ActionButtons id={row.original._id} />,
   },
 ];
 
@@ -182,18 +131,24 @@ function ActionButtons({ id }: { id?: string }) {
   const navigate = useNavigate();
 
   return (
-    <div className="flex gap-2">
+    <div className="flex items-center justify-end gap-1">
       <Button
-        variant="outline"
-        size={"icon"}
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-muted-foreground hover:text-foreground"
         onClick={() => navigate(`/dashboard/products/${id}/pricing`)}
-        title="Customize Pricing"
+        title="Pricing"
       >
-        <DollarSign size={18} />
+        <DollarSign size={15} />
       </Button>
       <Link to={`/dashboard/products/edit/${id}`}>
-        <Button variant="outline" size={"icon"}>
-          <Pencil size={18} />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          title="Edit"
+        >
+          <Pencil size={15} />
         </Button>
       </Link>
       <AlertConfirm
@@ -204,8 +159,13 @@ function ActionButtons({ id }: { id?: string }) {
           if (id) deleteMut.mutate(id);
         }}
       >
-        <Button variant="outline" size={"icon"}>
-          <Trash2 size={18} />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-red-600"
+          title="Delete"
+        >
+          <Trash2 size={15} />
         </Button>
       </AlertConfirm>
     </div>

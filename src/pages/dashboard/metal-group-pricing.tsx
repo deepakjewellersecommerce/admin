@@ -72,8 +72,8 @@ const MetalGroupPricingDashboard = () => {
   // Mutations
   const { mutate: updatePremium, isPending: isUpdatingPremium } = useUpdateMetalGroupPremium();
 
-  const metalGroups = metalGroupsData?.metalGroups || [];
-  const materials = materialsData?.materials || [];
+  const metalGroups = metalGroupsData?.data?.metalGroups || metalGroupsData?.metalGroups || [];
+  const materials = materialsData?.data?.materials || materialsData?.materials || [];
 
   // Filter materials for selected metal group
   const selectedGroupMaterials = selectedGroupId

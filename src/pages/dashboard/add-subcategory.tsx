@@ -477,6 +477,7 @@ const AddSubcategoryPage = () => {
       }
       if (hiddenValueTotal > 0) {
         comps[metalCostIndex].calculatedValue = Math.round((comps[metalCostIndex].calculatedValue + hiddenValueTotal) * 100) / 100;
+        comps[metalCostIndex].componentName = "Unit Cost";
         metalCost = comps[metalCostIndex].calculatedValue;
       }
     }
@@ -484,11 +485,13 @@ const AddSubcategoryPage = () => {
     subtotal = Math.round(subtotal * 100) / 100;
     metalCost = Math.round(metalCost * 100) / 100;
 
+    const hasHiddenComponents = hiddenValueTotal > 0;
+
     const finalComponents = isCustomerView
       ? comps.filter(c => c.isVisible !== false || c.componentKey === "metal_cost")
       : comps;
 
-    return { components: finalComponents, subtotal, metalCost };
+    return { components: finalComponents, subtotal, metalCost, hasHiddenComponents };
   }, [calculateComponentValue]);
 
   const adminBreakdown = useMemo(
@@ -879,7 +882,7 @@ const AddSubcategoryPage = () => {
                           ))}
                           <hr className="my-2" />
                           <div className="flex justify-between font-medium">
-                            <span>Metal Cost</span>
+                            <span>{customerBreakdown.hasHiddenComponents ? "Unit Cost" : "Metal Cost"}</span>
                             <span className="font-mono">₹{customerBreakdown.metalCost.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between text-lg font-semibold mt-1">

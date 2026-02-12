@@ -107,11 +107,11 @@ const CategoryHierarchyPage = () => {
   const { mutate: updateItem, isPending: isUpdatingItem } = useUpdateItem();
   const { mutate: updateCategory, isPending: isUpdatingCategory } = useUpdateCategory();
 
-  const materials = materialsData?.materials || [];
-  const genders = gendersData?.genders || [];
-  const items = itemsData?.items || [];
-  const categories = categoriesData?.categories || [];
-  const metalGroups = metalGroupsData?.metalGroups || [];
+  const materials = materialsData?.data?.materials || materialsData?.materials || [];
+  const genders = gendersData?.data?.genders || gendersData?.genders || [];
+  const items = itemsData?.data?.items || itemsData?.items || [];
+  const categories = categoriesData?.data?.categories || categoriesData?.categories || [];
+  const metalGroups = metalGroupsData?.data?.metalGroups || metalGroupsData?.metalGroups || [];
 
   // Update preview ID when form data changes
   useEffect(() => {

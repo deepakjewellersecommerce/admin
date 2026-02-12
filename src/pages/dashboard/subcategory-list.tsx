@@ -496,6 +496,7 @@ const SubcategoryListPage = () => {
 
       if (hiddenValueTotal > 0) {
         comps[metalCostIndex].calculatedValue = Math.round((comps[metalCostIndex].calculatedValue + hiddenValueTotal) * 100) / 100;
+        comps[metalCostIndex].componentName = "Unit Cost";
         metalCost = comps[metalCostIndex].calculatedValue;
       }
     }
@@ -503,12 +504,14 @@ const SubcategoryListPage = () => {
     subtotal = Math.round(subtotal * 100) / 100;
     metalCost = Math.round(metalCost * 100) / 100;
 
+    const hasHiddenComponents = hiddenValueTotal > 0;
+
     // For customer view, filter out hidden components (which now have 0 value)
     const finalComponents = isCustomerView
       ? comps.filter(c => c.isVisible || c.componentKey === "metal_cost")
       : comps;
 
-    return { components: finalComponents, subtotal, metalCost, metalRate: rate };
+    return { components: finalComponents, subtotal, metalCost, metalRate: rate, hasHiddenComponents };
   }, [calculateComponentValueLocal]);
 
   React.useEffect(() => {
@@ -1212,7 +1215,7 @@ const SubcategoryListPage = () => {
                     ))}
                     <hr className="my-2" />
                     <div className="flex justify-between font-medium">
-                      <span>Metal Cost</span>
+                      <span>{customerBreakdown.hasHiddenComponents ? "Unit Cost" : "Metal Cost"}</span>
                       <span className="font-mono">₹{customerBreakdown.metalCost.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between font-medium">

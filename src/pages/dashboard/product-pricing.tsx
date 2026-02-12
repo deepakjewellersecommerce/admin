@@ -184,14 +184,16 @@ const ProductPricingPage = () => {
       if (hiddenValueTotal > 0) {
         comps[metalCostIndex].calculatedValue =
           Math.round((comps[metalCostIndex].calculatedValue + hiddenValueTotal) * 100) / 100;
+        comps[metalCostIndex].componentName = "Unit Cost";
         metalCost = comps[metalCostIndex].calculatedValue;
       }
     }
 
-    return { 
-      components: isCustomerView ? comps.filter(c => c.isVisible || c.componentKey === "metal_cost") : comps, 
-      subtotal: Math.round(subtotal * 100) / 100, 
-      metalCost 
+    return {
+      components: isCustomerView ? comps.filter(c => c.isVisible || c.componentKey === "metal_cost") : comps,
+      subtotal: Math.round(subtotal * 100) / 100,
+      metalCost,
+      hasHiddenComponents: hiddenValueTotal > 0
     };
   }, [pricingComponents, previewNetWeight, previewMetalRate, calculateComponentValue]);
 

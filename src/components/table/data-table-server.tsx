@@ -17,6 +17,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import ErrorBoundary from "../ui/error-boundary";
 import { Button } from "../ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -57,6 +58,7 @@ export default function DataTable<TData, TValue>({
   useEffect(() => {
     changePage(pagination);
   }, [pagination]);
+
   const table = useReactTable({
     data,
     columns,
@@ -67,9 +69,6 @@ export default function DataTable<TData, TValue>({
     onPaginationChange: setPagination,
     manualFiltering: true,
     getCoreRowModel: getCoreRowModel(),
-    /*    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onGlobalFilterChange: setGlobalFilter, */
   });
 
   useEffect(() => {
@@ -80,25 +79,23 @@ export default function DataTable<TData, TValue>({
 
   return (
     <div>
-      <div className={cn("rounded-md dark:bg-dark-primary", className)}>
+      <div className={cn("rounded-md", className)}>
         <Table>
           {showHeader && (
             <TableHeader>
               {table?.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
+                <TableRow key={headerGroup.id} className="border-b border-border/60 hover:bg-transparent">
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      className="text-sm  text-gray-800 dark-border  bg-slate-100 dark:text-gray-200 font-medium whitespace-nowrap"
+                      className="h-9 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap bg-muted/30"
                     >
-                      <span className="flex justify-between  px-4 text-gray-700 dark:text-gray-200 font-semibold items-center">
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </span>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -109,13 +106,16 @@ export default function DataTable<TData, TValue>({
             {table?.getRowModel().rows?.length ? (
               table?.getRowModel().rows.map((row) => (
                 <TableRow
-                  className={cn("dark:text-gray-50 dark-border", rowClassName)}
+                  className={cn(
+                    "border-b border-border/40 hover:bg-muted/30 transition-colors",
+                    rowClassName
+                  )}
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
                 >
                   {row?.getVisibleCells().map((cell) => (
-                    <TableCell className="px-6">
-                      <ErrorBoundary key={cell.id}>
+                    <TableCell key={cell.id} className="px-4 py-3">
+                      <ErrorBoundary>
                         {flexRender(
                           cell?.column.columnDef.cell,
                           cell.getContext()
@@ -129,36 +129,41 @@ export default function DataTable<TData, TValue>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center"
+                  className="h-32 text-center text-muted-foreground"
                 >
-                  No results.
+                  No results found.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
-      <div className="flex w-full items-center border-t bg-white px-5 pt-8">
-        <div className="font-semibold">
-          {pagination.pageIndex + 1} of {totalPage ? totalPage : 1}
-          {" page(s)"} shown.
-        </div>
-        <div className="ml-auto   w-fit ">
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between border-t border-border/40 px-4 py-3">
+        <p className="text-sm text-muted-foreground tabular-nums">
+          Page {pagination.pageIndex + 1} of {totalPage || 1}
+        </p>
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            className="mr-5 text-black"
+            size="sm"
+            className="h-8 gap-1"
             disabled={!table.getCanPreviousPage()}
             onClick={table.previousPage}
           >
+            <ChevronLeft size={14} />
             Previous
           </Button>
           <Button
             variant="outline"
-            className="text-black"
+            size="sm"
+            className="h-8 gap-1"
             disabled={!table.getCanNextPage()}
             onClick={table.nextPage}
           >
-            next page
+            Next
+            <ChevronRight size={14} />
           </Button>
         </div>
       </div>
