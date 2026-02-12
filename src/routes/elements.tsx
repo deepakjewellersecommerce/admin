@@ -67,6 +67,8 @@ export const LoyaltyProgramSettings = Loadable(lazy(() => import("@/components/l
 
 // Multi-Metal Pricing & Catalog Management
 export const MetalPricingDashboard = Loadable(lazy(() => import("@/pages/dashboard/metal-pricing")));
+export const MetalGroupPricingDashboard = Loadable(lazy(() => import("@/pages/dashboard/metal-group-pricing")));
+export const MetalPriceDashboard = Loadable(lazy(() => import("@/pages/dashboard/metal-price-dashboard")));
 export const CategoryHierarchyPage = Loadable(lazy(() => import("@/pages/dashboard/category-hierarchy")));
 export const SubcategoriesPage = Loadable(lazy(() => import("@/pages/dashboard/subcategories")));
 export const PriceComponentsPage = Loadable(lazy(() => import("@/pages/dashboard/price-components")));

@@ -27,6 +27,8 @@ import {
   LoyaltyProgramSettings,
   LoyaltyUsersList,
   MetalPricingDashboard,
+  MetalGroupPricingDashboard,
+  MetalPriceDashboard,
   NoticationPage,
   PriceComponentsPage,
   OrderView,
@@ -297,8 +299,12 @@ export default function Router() {
         },
         // Multi-Metal Pricing & Catalog Routes
         {
+          path: "pricing/dashboard",
+          element: <MetalPriceDashboard />,
+        },
+        {
           path: "pricing/metals",
-          element: <MetalPricingDashboard />,
+          element: <MetalGroupPricingDashboard />,
         },
         {
           path: "catalog/categories",
