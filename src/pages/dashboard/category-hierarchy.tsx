@@ -64,8 +64,8 @@ import {
   useUpdateItem,
   useUpdateCategory,
   useGetCategoryImpact,
+  useGetAllMetalGroups,
 } from "@/lib/react-query/category-hierarchy-query";
-import { useGetMetalTypes } from "@/lib/react-query/metal-price-query";
 
 const CategoryHierarchyPage = () => {
   const [showDialog, setShowDialog] = useState(false);
@@ -90,7 +90,7 @@ const CategoryHierarchyPage = () => {
   const { data: categoriesData, isLoading: isLoadingCategories } = useGetAllCategories({
     includeInactive: true,
   });
-  const { data: metalTypesData } = useGetMetalTypes();
+  const { data: metalGroupsData } = useGetAllMetalGroups();
 
   // Impact query for edit confirmation
   const { data: impactData, isLoading: isLoadingImpact } = useGetCategoryImpact(
@@ -111,7 +111,7 @@ const CategoryHierarchyPage = () => {
   const genders = gendersData?.genders || [];
   const items = itemsData?.items || [];
   const categories = categoriesData?.categories || [];
-  const metalTypes = metalTypesData?.metalTypes || [];
+  const metalGroups = metalGroupsData?.metalGroups || [];
 
   // Update preview ID when form data changes
   useEffect(() => {
@@ -163,7 +163,6 @@ const CategoryHierarchyPage = () => {
       materialId: item.materialId?._id || item.materialId,
       genderId: item.genderId?._id || item.genderId,
       itemId: item.itemId?._id || item.itemId,
-      metalType: item.metalType,
       description: item.description,
       imageUrl: item.imageUrl,
       isActive: item.isActive,
@@ -265,30 +264,9 @@ const CategoryHierarchyPage = () => {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="materialId">Material *</Label>
-            {!isEditing && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  // Quick create material
-                  const name = prompt("Enter material name:");
-                  if (name) {
-                    createMaterial(
-                      { name, idAttribute: "", metalType: "GOLD_24K", isActive: true },
-                      {
-                        onSuccess: (newMaterial: any) => {
-                          setFormData({ ...formData, materialId: newMaterial._id });
-                        },
-                      }
-                    );
-                  }
-                }}
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Quick Add
-              </Button>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Use the Add Material dialog in add-category.tsx for creating materials
+            </p>
           </div>
           <Select
             value={formData.materialId || ""}
@@ -301,7 +279,9 @@ const CategoryHierarchyPage = () => {
             <SelectContent>
               {materials.map((m: any) => (
                 <SelectItem key={m._id} value={m._id}>
-                  {m.name} ({m.idAttribute})
+                  {m.name} ({m.idAttribute}) - {
+                    typeof m.metalGroup === 'object' ? m.metalGroup.name : 'N/A'
+                  }
                 </SelectItem>
               ))}
             </SelectContent>
@@ -444,29 +424,6 @@ const CategoryHierarchyPage = () => {
           </div>
         )}
 
-        {/* Metal Type - Only for Materials */}
-        {level === "materials" && (
-          <div className="space-y-2">
-            <Label htmlFor="metalType">Metal Type *</Label>
-            <Select
-              value={formData.metalType || ""}
-              onValueChange={(value) => setFormData({ ...formData, metalType: value })}
-              disabled={isEditing}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select metal type" />
-              </SelectTrigger>
-              <SelectContent>
-                {metalTypes.map((type: any) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.displayName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
         {/* Description - For Items and Categories */}
         {(level === "items" || level === "categories") && (
           <div className="space-y-2">
@@ -541,7 +498,8 @@ const CategoryHierarchyPage = () => {
               details = `${material?.name || '?'} → ${gender?.name || '?'} → ${itemType?.name || '?'}`;
               fullId = item.fullCategoryId;
             } else if (item.level === 'Material') {
-              details = item.metalType;
+              const metalGroup = typeof item.metalGroup === 'object' ? item.metalGroup : null;
+              details = metalGroup ? `${metalGroup.name} (${metalGroup.symbol})` : 'N/A';
             }
 
             return (

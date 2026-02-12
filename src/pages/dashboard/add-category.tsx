@@ -13,6 +13,7 @@ import {
   useGetAllMaterials,
   useGetAllGenders,
   useGetAllItems,
+  useGetAllMetalGroups,
   useCreateCategory,
   useCreateMaterial,
   useCreateItem,
@@ -63,14 +64,23 @@ const AddCategoryPage = () => {
   const [showMaterialDialog, setShowMaterialDialog] = useState(false);
   const [showItemDialog, setShowItemDialog] = useState(false);
 
-  // Inline form states
-  const [newMaterial, setNewMaterial] = useState({ name: "", idAttribute: "" });
+  // Inline form states for Add Material
+  const [newMaterial, setNewMaterial] = useState({
+    name: "",
+    displayName: "",
+    idAttribute: "",
+    metalGroupId: "",
+    purityType: "DERIVED" as "BASE" | "DERIVED",
+    purityNumerator: "",
+    purityDenominator: "",
+  });
   const [newItem, setNewItem] = useState({ name: "", idAttribute: "" });
 
   // Fetch data
   const { data: materialsData, isLoading: materialsLoading } = useGetAllMaterials();
   const { data: gendersData, isLoading: gendersLoading } = useGetAllGenders();
   const { data: itemsData, isLoading: itemsLoading } = useGetAllItems();
+  const { data: metalGroupsData, isLoading: metalGroupsLoading } = useGetAllMetalGroups();
 
   // Mutations
   const { mutate: createCategory, isPending: isCreating } = useCreateCategory();
@@ -101,6 +111,11 @@ const AddCategoryPage = () => {
     const data = materialsData?.data?.materials || materialsData?.materials || [];
     return Array.isArray(data) ? data : [];
   }, [materialsData]);
+
+  const metalGroups = useMemo(() => {
+    const data = metalGroupsData?.data?.metalGroups || metalGroupsData?.metalGroups || [];
+    return Array.isArray(data) ? data : [];
+  }, [metalGroupsData]);
 
   const genders = useMemo(() => {
     const data = gendersData?.data?.genders || gendersData?.genders || [];
@@ -154,23 +169,65 @@ const AddCategoryPage = () => {
     );
   };
 
+  // Calculate preview price for new material
+  const calculatedMaterialPrice = useMemo(() => {
+    const selectedGroup = metalGroups.find((g: any) => g._id === newMaterial.metalGroupId);
+    if (!selectedGroup?.basePrice) return 0;
+
+    const numerator = parseFloat(newMaterial.purityNumerator);
+    const denominator = parseFloat(newMaterial.purityDenominator);
+
+    if (isNaN(numerator) || isNaN(denominator) || denominator === 0) return 0;
+
+    const purityMultiplier = newMaterial.purityType === "BASE" ? 1 : numerator / denominator;
+    return (selectedGroup.basePrice * purityMultiplier).toFixed(2);
+  }, [newMaterial, metalGroups]);
+
+  // Calculate purity percentage
+  const purityPercentage = useMemo(() => {
+    const numerator = parseFloat(newMaterial.purityNumerator);
+    const denominator = parseFloat(newMaterial.purityDenominator);
+
+    if (isNaN(numerator) || isNaN(denominator) || denominator === 0) return "0.00";
+
+    return ((numerator / denominator) * 100).toFixed(2);
+  }, [newMaterial.purityNumerator, newMaterial.purityDenominator]);
+
   // Handle inline Material creation
   const handleCreateMaterial = () => {
-    if (!newMaterial.name || !newMaterial.idAttribute) {
-      toast.error("Name and ID attribute are required");
+    if (!newMaterial.name || !newMaterial.idAttribute || !newMaterial.metalGroupId) {
+      toast.error("Name, ID attribute, and metal group are required");
+      return;
+    }
+
+    if (!newMaterial.purityNumerator || !newMaterial.purityDenominator) {
+      toast.error("Purity numerator and denominator are required");
       return;
     }
 
     createMaterial(
       {
         name: newMaterial.name,
+        displayName: newMaterial.displayName || newMaterial.name,
         idAttribute: newMaterial.idAttribute.toUpperCase(),
+        metalGroupId: newMaterial.metalGroupId,
+        purityType: newMaterial.purityType,
+        purityNumerator: parseFloat(newMaterial.purityNumerator),
+        purityDenominator: parseFloat(newMaterial.purityDenominator),
         isActive: true,
       },
       {
         onSuccess: (response: any) => {
           setShowMaterialDialog(false);
-          setNewMaterial({ name: "", idAttribute: "" });
+          setNewMaterial({
+            name: "",
+            displayName: "",
+            idAttribute: "",
+            metalGroupId: "",
+            purityType: "DERIVED",
+            purityNumerator: "",
+            purityDenominator: "",
+          });
           if (response?.data?._id) {
             form.setValue("materialId", response.data._id);
           }
@@ -261,7 +318,7 @@ const AddCategoryPage = () => {
                       </DialogHeader>
                       <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                          <Label>Name</Label>
+                          <Label>Name *</Label>
                           <Input
                             placeholder="e.g., Gold 22K"
                             value={newMaterial.name}
@@ -269,7 +326,16 @@ const AddCategoryPage = () => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>ID Attribute</Label>
+                          <Label>Display Name</Label>
+                          <Input
+                            placeholder="e.g., Gold (22K)"
+                            value={newMaterial.displayName}
+                            onChange={(e) => setNewMaterial({ ...newMaterial, displayName: e.target.value })}
+                          />
+                          <p className="text-xs text-gray-500">Optional - defaults to Name if not provided</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>ID Attribute *</Label>
                           <Input
                             placeholder="e.g., G22"
                             maxLength={10}
@@ -277,9 +343,103 @@ const AddCategoryPage = () => {
                             onChange={(e) => setNewMaterial({ ...newMaterial, idAttribute: e.target.value.toUpperCase() })}
                           />
                         </div>
+                        <div className="space-y-2">
+                          <Label>Metal Group *</Label>
+                          <Select
+                            value={newMaterial.metalGroupId}
+                            onValueChange={(v) => setNewMaterial({ ...newMaterial, metalGroupId: v })}
+                            disabled={metalGroupsLoading}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select metal group..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {metalGroups.map((group: any) => (
+                                <SelectItem key={group._id} value={group._id}>
+                                  {group.name} ({group.symbol}) - ₹{group.basePrice.toFixed(2)}/g
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-gray-500">Base metal with MCX pricing</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Purity Type *</Label>
+                          <div className="flex gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                value="BASE"
+                                checked={newMaterial.purityType === "BASE"}
+                                onChange={(e) => setNewMaterial({ ...newMaterial, purityType: e.target.value as "BASE" | "DERIVED" })}
+                                className="w-4 h-4"
+                              />
+                              <span className="text-sm">Base (100%)</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                value="DERIVED"
+                                checked={newMaterial.purityType === "DERIVED"}
+                                onChange={(e) => setNewMaterial({ ...newMaterial, purityType: e.target.value as "BASE" | "DERIVED" })}
+                                className="w-4 h-4"
+                              />
+                              <span className="text-sm">Derived (with purity formula)</span>
+                            </label>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            Base: Full purity (e.g., 24K gold). Derived: Calculated purity (e.g., 22K gold)
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label>Purity Numerator *</Label>
+                            <Input
+                              type="number"
+                              step="0.001"
+                              placeholder="e.g., 91.6667"
+                              value={newMaterial.purityNumerator}
+                              onChange={(e) => setNewMaterial({ ...newMaterial, purityNumerator: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Purity Denominator *</Label>
+                            <Input
+                              type="number"
+                              step="0.001"
+                              placeholder="e.g., 99.995"
+                              value={newMaterial.purityDenominator}
+                              onChange={(e) => setNewMaterial({ ...newMaterial, purityDenominator: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          Formula: (Numerator / Denominator) × Base Price = Material Price
+                        </p>
+
+                        {newMaterial.metalGroupId && newMaterial.purityNumerator && newMaterial.purityDenominator && (
+                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-1">
+                            <p className="text-xs text-green-600 font-medium">Price Preview</p>
+                            <p className="text-lg font-bold text-green-800">₹{calculatedMaterialPrice}/g</p>
+                            <p className="text-xs text-green-600">
+                              Purity: {purityPercentage}% ({newMaterial.purityNumerator}/{newMaterial.purityDenominator})
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowMaterialDialog(false)}>Cancel</Button>
+                        <Button variant="outline" onClick={() => {
+                          setShowMaterialDialog(false);
+                          setNewMaterial({
+                            name: "",
+                            displayName: "",
+                            idAttribute: "",
+                            metalGroupId: "",
+                            purityType: "DERIVED",
+                            purityNumerator: "",
+                            purityDenominator: "",
+                          });
+                        }}>Cancel</Button>
                         <Button onClick={handleCreateMaterial} disabled={isCreatingMaterial}>
                           {isCreatingMaterial ? "Creating..." : "Create"}
                         </Button>

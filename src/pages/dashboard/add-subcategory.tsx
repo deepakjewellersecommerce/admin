@@ -3,12 +3,11 @@
  * Full page form for creating new subcategories with pricing configuration
  */
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
 import {
   useGetCategory,
   useCreateSubcategory,
@@ -24,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Plus, ArrowLeft, ChevronRight, Trash2, Circle, CheckCircle2 } from "lucide-react";
+import { Plus, ArrowLeft, ChevronRight, Trash2, Circle, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import FormProvider from "@/components/form/FormProvider";
 
 // Validation schema
@@ -54,14 +53,16 @@ interface PricingComponent {
   percentageOf?: "metalCost" | "subtotal";
   metalPriceMode?: "AUTO" | "MANUAL";
   manualMetalPrice?: number;
+  isVisible?: boolean;
+  isActive?: boolean;
 }
 
 // Default pricing components (keys must match PriceComponent.key in database)
 const DEFAULT_PRICING_COMPONENTS: PricingComponent[] = [
-  { componentKey: "metal_cost", componentName: "Metal Cost", calculationType: "PER_GRAM", value: 1, metalPriceMode: "AUTO" },
-  { componentKey: "making_charges", componentName: "Making Charges", calculationType: "PERCENTAGE", value: 15, percentageOf: "metalCost" },
-  { componentKey: "wastage_charges", componentName: "Wastage Charges", calculationType: "PERCENTAGE", value: 5, percentageOf: "metalCost" },
-  { componentKey: "gst", componentName: "GST", calculationType: "PERCENTAGE", value: 3, percentageOf: "subtotal" },
+  { componentKey: "metal_cost", componentName: "Metal Cost", calculationType: "PER_GRAM", value: 1, metalPriceMode: "AUTO", isVisible: true, isActive: true },
+  { componentKey: "making_charges", componentName: "Making Charges", calculationType: "PERCENTAGE", value: 15, percentageOf: "metalCost", isVisible: true, isActive: true },
+  { componentKey: "wastage_charges", componentName: "Wastage Charges", calculationType: "PERCENTAGE", value: 5, percentageOf: "metalCost", isVisible: true, isActive: true },
+  { componentKey: "gst", componentName: "GST", calculationType: "PERCENTAGE", value: 3, percentageOf: "subtotal", isVisible: true, isActive: true },
 ];
 
 const AddSubcategoryPage = () => {
@@ -259,6 +260,8 @@ const AddSubcategoryPage = () => {
           metalPriceMode: comp.metalPriceMode ?? null,
           manualMetalPrice: comp.manualMetalPrice ?? null,
           isFrozen: false,
+          isVisible: comp.isVisible ?? true,
+          isActive: comp.isActive ?? true,
         })),
       };
     }
@@ -365,6 +368,8 @@ const AddSubcategoryPage = () => {
         calculationType: "PERCENTAGE",
         value: 0,
         percentageOf: "metalCost",
+        isVisible: true,
+        isActive: true,
       },
     ]);
   };
@@ -373,6 +378,128 @@ const AddSubcategoryPage = () => {
   const removePricingComponent = (index: number) => {
     setPricingComponents(pricingComponents.filter((_, i) => i !== index));
   };
+
+  // Derive preview weight from the form's weight field (fallback to 1g for meaningful preview)
+  const formWeight = form.watch("weight");
+  const previewWeight = formWeight && formWeight > 0 ? formWeight : 1;
+
+  // Derive preview metal rate from the metal_cost component's configuration
+  const previewMetalRate = useMemo(() => {
+    const metalCostComp = pricingComponents.find(c => c.componentKey === "metal_cost");
+    if (!metalCostComp) return 0;
+
+    if (metalCostComp.metalPriceMode === "MANUAL" && metalCostComp.manualMetalPrice) {
+      return metalCostComp.manualMetalPrice;
+    }
+
+    // AUTO mode: use system metal price
+    const prices = metalPricesData?.data?.prices || metalPricesData?.prices || [];
+    if (prices.length === 0) return 0;
+
+    const extractMetalType = (material: unknown): string | null => {
+      if (!material || typeof material !== 'object') return null;
+      const mat = material as Record<string, unknown>;
+      if (mat.metalType) return mat.metalType as string;
+      const idAttr = mat.idAttribute as string | undefined;
+      if (idAttr) {
+        const mapping: Record<string, string> = { 'G24': 'GOLD_24K', 'G22': 'GOLD_22K', 'S999': 'SILVER_999', 'S925': 'SILVER_925', 'PT': 'PLATINUM' };
+        if (mapping[idAttr]) return mapping[idAttr];
+      }
+      return null;
+    };
+
+    const categoryMaterial = typeof category?.materialId === 'object' ? category.materialId : null;
+    const parentMaterial = typeof parentSubcategory?.materialId === 'object' ? parentSubcategory.materialId : null;
+    const metalType = extractMetalType(categoryMaterial) || extractMetalType(parentMaterial);
+
+    if (metalType) {
+      const metalPrice = prices.find((p: Record<string, unknown>) => p.metalType === metalType);
+      if (metalPrice && (metalPrice as Record<string, number>).pricePerGram > 0) {
+        return (metalPrice as Record<string, number>).pricePerGram;
+      }
+    }
+    return 0;
+  }, [pricingComponents, metalPricesData, category, parentSubcategory]);
+
+  // Compute price breakdown for Admin and Customer views
+  const calculateComponentValue = useCallback((component: PricingComponent, context: { netWeight: number; metalRate: number; metalCost: number; subtotal: number }) => {
+    const { netWeight, metalRate, metalCost, subtotal } = context;
+
+    if (component.componentKey === "metal_cost") {
+      if (component.metalPriceMode === "MANUAL" && component.manualMetalPrice) {
+        return component.manualMetalPrice * netWeight;
+      }
+      return netWeight * metalRate;
+    }
+
+    switch (component.calculationType) {
+      case "PER_GRAM":
+        return netWeight * (component.value || 1);
+      case "PERCENTAGE": {
+        const base = component.percentageOf === "subtotal" ? subtotal : metalCost;
+        return (base * (component.value || 0)) / 100;
+      }
+      case "FIXED":
+        return component.value || 0;
+      default:
+        return 0;
+    }
+  }, []);
+
+  const computeBreakdown = useCallback((components: PricingComponent[], weight: number, rate: number, isCustomerView = false) => {
+    let subtotal = 0;
+    let metalCost = 0;
+    let hiddenValueTotal = 0;
+    let metalCostIndex = -1;
+
+    const comps: (PricingComponent & { calculatedValue: number })[] = [];
+    for (const comp of components) {
+      if (comp.isActive === false) continue;
+      let calculatedValue = calculateComponentValue(comp, { netWeight: weight, metalRate: rate, metalCost, subtotal });
+      calculatedValue = Math.round(calculatedValue * 100) / 100;
+
+      if (comp.componentKey === "metal_cost") {
+        metalCost = calculatedValue;
+        metalCostIndex = comps.length;
+      }
+
+      comps.push({ ...comp, calculatedValue });
+      subtotal += calculatedValue;
+    }
+
+    if (isCustomerView && metalCostIndex !== -1) {
+      for (let i = 0; i < comps.length; i++) {
+        const c = comps[i];
+        if (c.componentKey !== "metal_cost" && !c.isVisible) {
+          hiddenValueTotal += c.calculatedValue;
+          c.calculatedValue = 0;
+        }
+      }
+      if (hiddenValueTotal > 0) {
+        comps[metalCostIndex].calculatedValue = Math.round((comps[metalCostIndex].calculatedValue + hiddenValueTotal) * 100) / 100;
+        metalCost = comps[metalCostIndex].calculatedValue;
+      }
+    }
+
+    subtotal = Math.round(subtotal * 100) / 100;
+    metalCost = Math.round(metalCost * 100) / 100;
+
+    const finalComponents = isCustomerView
+      ? comps.filter(c => c.isVisible !== false || c.componentKey === "metal_cost")
+      : comps;
+
+    return { components: finalComponents, subtotal, metalCost };
+  }, [calculateComponentValue]);
+
+  const adminBreakdown = useMemo(
+    () => computeBreakdown(pricingComponents, previewWeight, previewMetalRate, false),
+    [pricingComponents, previewWeight, previewMetalRate, computeBreakdown]
+  );
+
+  const customerBreakdown = useMemo(
+    () => computeBreakdown(pricingComponents, previewWeight, previewMetalRate, true),
+    [pricingComponents, previewWeight, previewMetalRate, computeBreakdown]
+  );
 
   const isLoading = categoryLoading || (isNestedView && parentSubcategoryLoading);
 
@@ -577,7 +704,7 @@ const AddSubcategoryPage = () => {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {pricingComponents.map((comp, index) => (
-                      <div key={index} className="flex flex-col gap-2 p-3 bg-white rounded-lg border">
+                      <div key={index} className={`flex flex-col gap-2 p-3 bg-white rounded-lg border ${comp.isActive === false ? "opacity-50" : ""}`}>
                         <div className="flex items-center gap-3">
                           <Input
                             className="flex-1"
@@ -607,6 +734,27 @@ const AddSubcategoryPage = () => {
                                 <option value="FIXED">Fixed</option>
                               </select>
                             )}
+
+                            {/* Visibility toggle */}
+                            <Button
+                              type="button"
+                              variant={comp.isVisible !== false ? "outline" : "ghost"}
+                              size="sm"
+                              onClick={() => updateComponentValue(index, "isVisible", comp.isVisible === false)}
+                              title={comp.isVisible !== false ? "Visible to customers - click to hide" : "Hidden from customers - click to show"}
+                            >
+                              {comp.isVisible !== false ? (
+                                <Eye className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <EyeOff className="h-4 w-4 text-gray-400" />
+                              )}
+                            </Button>
+
+                            {/* Active toggle */}
+                            <Switch
+                              checked={comp.isActive !== false}
+                              onCheckedChange={(checked) => updateComponentValue(index, "isActive", checked)}
+                            />
 
                             <Button
                               type="button"
@@ -663,6 +811,84 @@ const AddSubcategoryPage = () => {
                         )}
                       </div>
                     ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Live Price Preview */}
+              {pricingMode === "custom" && pricingComponents.length > 0 && (
+                <Card className="border-dashed">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Live Price Preview</CardTitle>
+                    <CardDescription>
+                      Preview how pricing will appear to admin vs customers. Uses the weight and metal rate from the form above.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center gap-24 text-sm text-muted-foreground bg-gray-50 p-3 rounded border">
+                      <div>
+                        <span className="text-gray-500">Weight:</span>{" "}
+                        <span className="font-medium text-foreground">
+                          {formWeight && formWeight > 0 ? `${formWeight}g` : "1g (default)"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Metal Rate:</span>{" "}
+                        <span className="font-medium text-foreground">{previewMetalRate > 0 ? `₹${previewMetalRate.toFixed(2)}/g` : "Not set"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Source:</span>{" "}
+                        <span className="font-medium text-foreground">
+                          {pricingComponents.find(c => c.componentKey === "metal_cost")?.metalPriceMode === "MANUAL" ? "Manual" : "Auto (System)"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Admin View */}
+                      <div>
+                        <h5 className="text-sm font-medium mb-2">Admin View (all components)</h5>
+                        <div className="bg-gray-50 p-3 rounded border">
+                          {adminBreakdown.components.map((c: PricingComponent & { calculatedValue: number }) => (
+                            <div key={c.componentKey} className="flex justify-between text-sm py-1">
+                              <span className="text-gray-700">{c.componentName}</span>
+                              <span className="font-mono">₹{(c.calculatedValue ?? 0).toFixed(2)}</span>
+                            </div>
+                          ))}
+                          <hr className="my-2" />
+                          <div className="flex justify-between font-medium">
+                            <span>Metal Cost</span>
+                            <span className="font-mono">₹{adminBreakdown.metalCost.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-lg font-semibold mt-1">
+                            <span>Total</span>
+                            <span className="font-mono">₹{adminBreakdown.subtotal.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Customer View */}
+                      <div>
+                        <h5 className="text-sm font-medium mb-2">Customer View (visible components)</h5>
+                        <div className="bg-gray-50 p-3 rounded border">
+                          {customerBreakdown.components.map((c: PricingComponent & { calculatedValue: number }) => (
+                            <div key={c.componentKey} className="flex justify-between text-sm py-1">
+                              <span className="text-gray-700">{c.componentName}</span>
+                              <span className="font-mono">₹{(c.calculatedValue ?? 0).toFixed(2)}</span>
+                            </div>
+                          ))}
+                          <hr className="my-2" />
+                          <div className="flex justify-between font-medium">
+                            <span>Metal Cost</span>
+                            <span className="font-mono">₹{customerBreakdown.metalCost.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-lg font-semibold mt-1">
+                            <span>Total</span>
+                            <span className="font-mono">₹{customerBreakdown.subtotal.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               )}
