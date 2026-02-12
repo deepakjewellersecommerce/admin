@@ -6,17 +6,63 @@
 import instance from "./instance";
 
 // Types
+
+/**
+ * Metal Group - Base metals with MCX pricing
+ */
+export interface MetalGroup {
+  _id: string;
+  name: string;
+  symbol: string;
+  apiKey: string;
+  mcxPrice: number;
+  premium: number;
+  basePrice: number;
+  apiSource: "MCX" | "LBMA" | "IBJA" | "LME" | "MANUAL";
+  lastFetched: string | null;
+  currency: string;
+  unit: string;
+  isActive: boolean;
+  isAutoUpdate: boolean;
+  sortOrder: number;
+  description?: string;
+  imageUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Material - Purity variants of metals
+ */
 export interface Material {
   _id: string;
   name: string;
+  displayName: string;
   slug: string;
   idAttribute: string;
-  metalType: string;
+  metalGroup: MetalGroup | string; // Populated or ID
+  purityType: "BASE" | "DERIVED";
+  purityNumerator: number;
+  purityDenominator: number;
+  purityFormula: string;
+  purityPercentage: number;
+  pricePerGram: number;
+  lastCalculated: string | null;
+  priceOverride: {
+    isActive: boolean;
+    overridePrice: number | null;
+    reason: string | null;
+    setBy: string | null;
+    setAt: string | null;
+  };
   imageUrl?: string;
   isActive: boolean;
   sortOrder: number;
+  description?: string;
   createdAt: string;
   updatedAt: string;
+  effectivePrice?: number; // Virtual field
+  metalType?: string; // Legacy field (deprecated)
 }
 
 export interface Gender {
@@ -168,9 +214,36 @@ export interface SubcategoryFlat {
   isActive: boolean;
 }
 
+// ==================== METAL GROUPS ====================
+
+export const getAllMetalGroups = async (params?: { includeInactive?: boolean }) => {
+  const response = await instance.get("/admin/categories/metal-groups", { params });
+  return response.data;
+};
+
+export const getMetalGroup = async (id: string) => {
+  const response = await instance.get(`/admin/categories/metal-groups/${id}`);
+  return response.data;
+};
+
+export const updateMetalGroup = async (id: string, data: Partial<MetalGroup>) => {
+  const response = await instance.put(`/admin/categories/metal-groups/${id}`, data);
+  return response.data;
+};
+
+export const updateMetalGroupPremium = async (id: string, premium: number) => {
+  const response = await instance.put(`/admin/categories/metal-groups/${id}/premium`, {
+    premium
+  });
+  return response.data;
+};
+
 // ==================== MATERIALS ====================
 
-export const getAllMaterials = async (params?: { includeInactive?: boolean }) => {
+export const getAllMaterials = async (params?: {
+  includeInactive?: boolean;
+  metalGroupId?: string;
+}) => {
   const response = await instance.get("/admin/categories/materials", { params });
   return response.data;
 };
@@ -180,12 +253,20 @@ export const getMaterial = async (id: string) => {
   return response.data;
 };
 
-export const createMaterial = async (data: Partial<Material>) => {
+export const createMaterial = async (data: Partial<Material> & {
+  metalGroupId?: string; // For API compatibility
+  purityNumerator?: number;
+  purityDenominator?: number;
+}) => {
   const response = await instance.post("/admin/categories/materials", data);
   return response.data;
 };
 
-export const updateMaterial = async (id: string, data: Partial<Material>) => {
+export const updateMaterial = async (id: string, data: Partial<Material> & {
+  overridePrice?: number;
+  overrideReason?: string;
+  removeOverride?: boolean;
+}) => {
   const response = await instance.put(`/admin/categories/materials/${id}`, data);
   return response.data;
 };
@@ -462,6 +543,11 @@ export const getSubcategoryAffectedProducts = async (
 };
 
 export default {
+  // Metal Groups
+  getAllMetalGroups,
+  getMetalGroup,
+  updateMetalGroup,
+  updateMetalGroupPremium,
   // Materials
   getAllMaterials,
   getMaterial,

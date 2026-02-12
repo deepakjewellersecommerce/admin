@@ -5,6 +5,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import categoryHierarchyAPI, {
+  MetalGroup,
   Material,
   Gender,
   Item,
@@ -13,6 +14,57 @@ import categoryHierarchyAPI, {
   PricingComponent,
 } from "../axios/category-hierarchy-API";
 import { toast } from "sonner";
+
+// ==================== METAL GROUPS ====================
+
+export const useGetAllMetalGroups = (params?: { includeInactive?: boolean }) => {
+  return useQuery({
+    queryKey: ["categoryHierarchy", "metalGroups", params],
+    queryFn: () => categoryHierarchyAPI.getAllMetalGroups(params),
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+};
+
+export const useGetMetalGroup = (id: string) => {
+  return useQuery({
+    queryKey: ["categoryHierarchy", "metalGroups", id],
+    queryFn: () => categoryHierarchyAPI.getMetalGroup(id),
+    enabled: Boolean(id),
+  });
+};
+
+export const useUpdateMetalGroup = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<MetalGroup> }) =>
+      categoryHierarchyAPI.updateMetalGroup(id, data),
+    onSuccess: () => {
+      toast.success("Metal group updated successfully!");
+      queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "metalGroups"] });
+      queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "materials"] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Failed to update metal group");
+    },
+  });
+};
+
+export const useUpdateMetalGroupPremium = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, premium }: { id: string; premium: number }) =>
+      categoryHierarchyAPI.updateMetalGroupPremium(id, premium),
+    onSuccess: (data) => {
+      const affected = data?.data?.affectedMaterials || 0;
+      toast.success(`Premium updated! ${affected} material prices recalculated.`);
+      queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "metalGroups"] });
+      queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "materials"] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Failed to update premium");
+    },
+  });
+};
 
 // ==================== MATERIALS ====================
 
