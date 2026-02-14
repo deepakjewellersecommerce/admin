@@ -5,7 +5,7 @@ import {
   useStockTurnover,
   useInventoryValuationTrend,
 } from "@/lib/react-query/dashboard-analytics-query";
-import { formatCurrency, MetricSkeleton } from "@/lib/analytics-utils";
+import { formatCurrency, MetricSkeleton, InfoTip } from "@/lib/analytics-utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,15 +39,15 @@ const AnalyticsInventory = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
-            <CardHeader className="pb-2"><CardDescription>Total Valuation</CardDescription></CardHeader>
+            <CardHeader className="pb-2"><CardDescription>Total Valuation<InfoTip text="Sum of (stock quantity × cost price) for all active products" /></CardDescription></CardHeader>
             <CardContent><div className="text-2xl font-bold">{formatCurrency(trendData?.totalValuation || 0)}</div></CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2"><CardDescription>Total Stock Units</CardDescription></CardHeader>
+            <CardHeader className="pb-2"><CardDescription>Total Stock Units<InfoTip text="Total available inventory units across all products" /></CardDescription></CardHeader>
             <CardContent><div className="text-2xl font-bold">{(trendData?.totalStock || 0).toLocaleString("en-IN")}</div></CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2"><CardDescription>Active Products</CardDescription></CardHeader>
+            <CardHeader className="pb-2"><CardDescription>Active Products<InfoTip text="Number of products currently in stock" /></CardDescription></CardHeader>
             <CardContent><div className="text-2xl font-bold">{trendData?.totalProducts || 0}</div></CardContent>
           </Card>
         </div>

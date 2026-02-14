@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, Clock, Package, TrendingUp, TrendingDown, RefreshCw, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatCurrency } from "@/lib/analytics-utils";
+import { formatCurrency, InfoTip } from "@/lib/analytics-utils";
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleString('en-IN', {
@@ -63,7 +63,7 @@ const DashboardKPIs = () => {
         {/* Pending Orders Alert */}
         <Card className={kpis?.alerts?.pendingOrders?.total > 0 ? "border-red-200 bg-red-50" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Orders Pending</CardTitle>
+            <CardTitle className="text-sm font-medium">Orders Pending<InfoTip text="Orders not yet processed. Includes count of orders older than 24 hours" /></CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -90,7 +90,7 @@ const DashboardKPIs = () => {
         {/* Today's Revenue */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">Today's Revenue<InfoTip text="Revenue from orders placed today (midnight to now)" /></CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -106,7 +106,7 @@ const DashboardKPIs = () => {
         {/* Stock-Out Orders Alert */}
         <Card className={kpis?.alerts?.stockOutOrders > 0 ? "border-orange-200 bg-orange-50" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Stock-Out Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Stock-Out Orders<InfoTip text="Orders containing items that are currently out of stock" /></CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -133,7 +133,7 @@ const DashboardKPIs = () => {
         {/* Pricing Errors Alert */}
         <Card className={kpis?.alerts?.pricingErrors > 0 ? "border-yellow-200 bg-yellow-50" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pricing Errors</CardTitle>
+            <CardTitle className="text-sm font-medium">Pricing Errors<InfoTip text="Products with missing or misconfigured pricing (e.g., no metal type, weight, or subcategory pricing)" /></CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>

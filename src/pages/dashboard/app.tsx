@@ -82,31 +82,31 @@ const DashboardHome = () => {
 
   // Existing data hooks — these metric cards are unique to Overview
   const defaultOrderMetrics = useMemo(() => [
-    { title: "Total Orders", value: "0", icon: Box },
-    { title: "Complete Orders", value: "0", icon: Check },
-    { title: "Pending Orders", value: "0", icon: TimerIcon },
-    { title: "Canceled Orders", value: "0", icon: X },
+    { title: "Total Orders", value: "0", icon: Box, tooltip: "Total orders placed in the selected period" },
+    { title: "Complete Orders", value: "0", icon: Check, tooltip: "Orders that have been delivered successfully" },
+    { title: "Pending Orders", value: "0", icon: TimerIcon, tooltip: "Orders awaiting processing or shipment" },
+    { title: "Canceled Orders", value: "0", icon: X, tooltip: "Orders canceled by customer or admin" },
   ], []);
 
   const defaultRevenueMetrics = useMemo(() => [
-    { title: "Revenue", value: "₹0", icon: IndianRupee },
-    { title: "Orders (Revenue)", value: "0", icon: Calendar },
-    { title: "Total Revenue", value: "₹0", icon: TrendingUp },
-    { title: "Avg Order Value", value: "₹0", icon: Coins },
+    { title: "Revenue", value: "₹0", icon: IndianRupee, tooltip: "Total revenue from all orders in the selected period" },
+    { title: "Orders (Revenue)", value: "0", icon: Calendar, tooltip: "Number of orders contributing to revenue" },
+    { title: "Total Revenue", value: "₹0", icon: TrendingUp, tooltip: "Cumulative revenue across all time" },
+    { title: "Avg Order Value", value: "₹0", icon: Coins, tooltip: "Average amount per order (total revenue / order count)" },
   ], []);
 
   const defaultProductMetrics = useMemo(() => [
-    { title: "Total Products", value: "0", icon: ShoppingCart },
-    { title: "Active Products", value: "0", icon: Check },
-    { title: "Out of Stock", value: "0", icon: AlertTriangle },
-    { title: "Featured Products", value: "0", icon: Star },
+    { title: "Total Products", value: "0", icon: ShoppingCart, tooltip: "Total products in your catalog" },
+    { title: "Active Products", value: "0", icon: Check, tooltip: "Products currently visible and available for purchase" },
+    { title: "Out of Stock", value: "0", icon: AlertTriangle, tooltip: "Products with zero available inventory" },
+    { title: "Featured Products", value: "0", icon: Star, tooltip: "Products marked as featured on the storefront" },
   ], []);
 
   const defaultCustomerMetrics = useMemo(() => [
-    { title: "Total Customers", value: "0", icon: Users },
-    { title: "New Users", value: "0", icon: User },
-    { title: "Total Categories", value: "0", icon: Package },
-    { title: "Total Subcategories", value: "0", icon: Box },
+    { title: "Total Customers", value: "0", icon: Users, tooltip: "Total registered users on the platform" },
+    { title: "New Users", value: "0", icon: User, tooltip: "Users who registered in the selected period" },
+    { title: "Total Categories", value: "0", icon: Package, tooltip: "Number of product categories in your catalog" },
+    { title: "Total Subcategories", value: "0", icon: Box, tooltip: "Number of product subcategories" },
   ], []);
 
   const { data } = useDashboardData(dateRange);
@@ -356,8 +356,8 @@ const DashboardHome = () => {
           Revenue & Sales
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {displayRevenueMetrics.map((metric: { icon: LucideIcon; title: string; value: string }, index: number) => (
-            <DashboardCard key={index} Icon={metric.icon} title={metric.title} value={metric.value} />
+          {displayRevenueMetrics.map((metric: { icon: LucideIcon; title: string; value: string; tooltip?: string }, index: number) => (
+            <DashboardCard key={index} Icon={metric.icon} title={metric.title} value={metric.value} tooltip={metric.tooltip} />
           ))}
         </div>
       </section>
@@ -369,8 +369,8 @@ const DashboardHome = () => {
           Orders
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {displayOrderMetrics.map((metric: { icon: LucideIcon; title: string; value: string }, index: number) => (
-            <DashboardCard key={index} Icon={metric.icon} title={metric.title} value={metric.value} />
+          {displayOrderMetrics.map((metric: { icon: LucideIcon; title: string; value: string; tooltip?: string }, index: number) => (
+            <DashboardCard key={index} Icon={metric.icon} title={metric.title} value={metric.value} tooltip={metric.tooltip} />
           ))}
         </div>
       </section>
@@ -382,8 +382,8 @@ const DashboardHome = () => {
           Products & Inventory
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {displayProductMetrics.map((metric: { icon: LucideIcon; title: string; value: string }, index: number) => (
-            <DashboardCard key={index} Icon={metric.icon} title={metric.title} value={metric.value} />
+          {displayProductMetrics.map((metric: { icon: LucideIcon; title: string; value: string; tooltip?: string }, index: number) => (
+            <DashboardCard key={index} Icon={metric.icon} title={metric.title} value={metric.value} tooltip={metric.tooltip} />
           ))}
         </div>
       </section>
@@ -395,8 +395,8 @@ const DashboardHome = () => {
           Customers & Catalog
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {displayCustomerMetrics.map((metric: { icon: LucideIcon; title: string; value: string }, index: number) => (
-            <DashboardCard key={index} Icon={metric.icon} title={metric.title} value={metric.value} />
+          {displayCustomerMetrics.map((metric: { icon: LucideIcon; title: string; value: string; tooltip?: string }, index: number) => (
+            <DashboardCard key={index} Icon={metric.icon} title={metric.title} value={metric.value} tooltip={metric.tooltip} />
           ))}
         </div>
       </section>

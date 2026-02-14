@@ -11,6 +11,7 @@ import { Badge } from "../ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Users, MapPin, Trophy } from "lucide-react";
+import { InfoTip } from "@/lib/analytics-utils";
 
 type TableFilter = {
   date: string;
@@ -72,7 +73,7 @@ const UsersList = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 mb-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-1"><Users className="h-4 w-4" /> Total Users</CardDescription>
+            <CardDescription className="flex items-center gap-1"><Users className="h-4 w-4" /> Total Users<InfoTip text="Total registered users on the platform" /></CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data?.data?.data?.total ?? 0}</div>
@@ -80,7 +81,7 @@ const UsersList = () => {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-1"><Users className="h-4 w-4" /> Repeat Customers</CardDescription>
+            <CardDescription className="flex items-center gap-1"><Users className="h-4 w-4" /> Repeat Customers<InfoTip text="Customers who placed more than one order" /></CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
@@ -91,7 +92,7 @@ const UsersList = () => {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-1"><MapPin className="h-4 w-4" /> Top City</CardDescription>
+            <CardDescription className="flex items-center gap-1"><MapPin className="h-4 w-4" /> Top City<InfoTip text="City with the highest revenue from orders" /></CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{topCity}</div>

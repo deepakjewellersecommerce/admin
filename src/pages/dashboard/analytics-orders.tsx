@@ -8,7 +8,7 @@ import {
   useTopCategories,
   useTopLocations,
 } from "@/lib/react-query/dashboard-analytics-query";
-import { formatCurrency, MetricSkeleton } from "@/lib/analytics-utils";
+import { formatCurrency, MetricSkeleton, InfoTip } from "@/lib/analytics-utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -74,7 +74,7 @@ const AnalyticsOrders = () => {
       {/* Order Funnel */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Order Status Funnel</CardTitle>
+          <CardTitle className="text-lg">Order Status Funnel<InfoTip text="Shows how many orders are at each stage from Placed to Delivered" /></CardTitle>
           <CardDescription>Conversion path from Placed to Delivered</CardDescription>
         </CardHeader>
         <CardContent>
@@ -102,7 +102,7 @@ const AnalyticsOrders = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Revenue Trend</CardTitle>
+            <CardTitle className="text-lg">Revenue Trend<InfoTip text="Daily revenue and order count over the selected period" /></CardTitle>
           </CardHeader>
           <CardContent>
             {isLoadingTrends ? (
@@ -127,7 +127,7 @@ const AnalyticsOrders = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Revenue by Metal Type</CardTitle>
+            <CardTitle className="text-lg">Revenue by Metal Type<InfoTip text="Revenue breakdown by metal type (Gold, Silver, etc.)" /></CardTitle>
           </CardHeader>
           <CardContent>
             {isLoadingMetal ? (

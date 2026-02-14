@@ -147,28 +147,28 @@ const AnalyticsFinancial = () => {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
-              <CardHeader className="pb-2"><CardDescription>Total Tax Collected</CardDescription></CardHeader>
+              <CardHeader className="pb-2"><CardDescription>Total Tax Collected<InfoTip text="Sum of all GST/tax amounts from orders" /></CardDescription></CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-blue-600">{formatCurrency(taxData?.totalTaxCollected || 0)}</div>
                 <ChangeIndicator value={taxData?.previousPeriod?.totalTaxCollected} />
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2"><CardDescription>Taxable Amount</CardDescription></CardHeader>
+              <CardHeader className="pb-2"><CardDescription>Taxable Amount<InfoTip text="Order subtotal before tax is applied" /></CardDescription></CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{formatCurrency(taxData?.taxableAmount || 0)}</div>
                 <ChangeIndicator value={taxData?.previousPeriod?.taxableAmount} />
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2"><CardDescription>Effective Tax Rate</CardDescription></CardHeader>
+              <CardHeader className="pb-2"><CardDescription>Effective Tax Rate<InfoTip text="Average tax rate: (tax collected / taxable amount) × 100" /></CardDescription></CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{taxData?.effectiveTaxRate || 0}%</div>
                 <ChangeIndicator value={taxData?.previousPeriod?.effectiveTaxRate} />
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2"><CardDescription>Net After Tax</CardDescription></CardHeader>
+              <CardHeader className="pb-2"><CardDescription>Net After Tax<InfoTip text="Revenue remaining after subtracting taxes" /></CardDescription></CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">{formatCurrency(taxData?.netRevenueAfterTax || 0)}</div>
                 <ChangeIndicator value={taxData?.previousPeriod?.netRevenueAfterTax} />
@@ -192,25 +192,25 @@ const AnalyticsFinancial = () => {
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <Card>
-                <CardHeader className="pb-2"><CardDescription>Coupons Used</CardDescription></CardHeader>
+                <CardHeader className="pb-2"><CardDescription>Coupons Used<InfoTip text="Number of times promo codes were applied to orders" /></CardDescription></CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{couponData?.summary?.totalCouponsUsed || 0}</div>
                   <ChangeIndicator value={couponData?.summary?.previousPeriod?.totalCouponsUsed} />
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="pb-2"><CardDescription>Discount Given</CardDescription></CardHeader>
+                <CardHeader className="pb-2"><CardDescription>Discount Given<InfoTip text="Total discount amount from coupon usage" /></CardDescription></CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-red-600">{formatCurrency(couponData?.summary?.totalDiscountGiven || 0)}</div>
                   <ChangeIndicator value={couponData?.summary?.previousPeriod?.totalDiscountGiven} />
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="pb-2"><CardDescription>Most Used Coupon</CardDescription></CardHeader>
+                <CardHeader className="pb-2"><CardDescription>Most Used Coupon<InfoTip text="The coupon code applied most frequently" /></CardDescription></CardHeader>
                 <CardContent><div className="text-xl font-bold">{couponData?.summary?.mostUsedCoupon || "N/A"}</div></CardContent>
               </Card>
               <Card>
-                <CardHeader className="pb-2"><CardDescription>Coupon ROI</CardDescription></CardHeader>
+                <CardHeader className="pb-2"><CardDescription>Coupon ROI<InfoTip text="Return on investment: (revenue from coupon orders / discount given) × 100" /></CardDescription></CardHeader>
                 <CardContent><div className="text-2xl font-bold text-green-600">{couponData?.summary?.couponROI || 0}%</div></CardContent>
               </Card>
             </div>
@@ -273,28 +273,28 @@ const AnalyticsFinancial = () => {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
-              <CardHeader className="pb-2"><CardDescription>Outstanding Points</CardDescription></CardHeader>
+              <CardHeader className="pb-2"><CardDescription>Outstanding Points<InfoTip text="Total unredeemed loyalty points across all users" /></CardDescription></CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{(loyaltyData?.totalOutstandingPoints || 0).toLocaleString("en-IN")}</div>
                 <p className="text-xs text-muted-foreground mt-1">across {loyaltyData?.totalUsersWithPoints || 0} users</p>
               </CardContent>
             </Card>
             <Card className="bg-orange-50">
-              <CardHeader className="pb-2"><CardDescription>Cash Liability</CardDescription></CardHeader>
+              <CardHeader className="pb-2"><CardDescription>Cash Liability<InfoTip text="Monetary value of outstanding points at current conversion rate" /></CardDescription></CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-orange-700">{formatCurrency(loyaltyData?.cashLiability || 0)}</div>
                 <p className="text-xs text-muted-foreground mt-1">@ {loyaltyData?.pointsToRupeeRatio || 10} pts = ₹1</p>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2"><CardDescription>Points Earned (Period)</CardDescription></CardHeader>
+              <CardHeader className="pb-2"><CardDescription>Points Earned (Period)<InfoTip text="Loyalty points earned by customers in the selected period" /></CardDescription></CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">{(loyaltyData?.period?.pointsEarned || 0).toLocaleString("en-IN")}</div>
                 <ChangeIndicator value={loyaltyData?.previousPeriod?.pointsEarned} />
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2"><CardDescription>Points Redeemed (Period)</CardDescription></CardHeader>
+              <CardHeader className="pb-2"><CardDescription>Points Redeemed (Period)<InfoTip text="Loyalty points redeemed by customers in the selected period" /></CardDescription></CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-blue-600">{(loyaltyData?.period?.pointsRedeemed || 0).toLocaleString("en-IN")}</div>
                 <ChangeIndicator value={loyaltyData?.previousPeriod?.pointsRedeemed} />
@@ -316,19 +316,19 @@ const AnalyticsFinancial = () => {
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <Card className="bg-green-50">
-                <CardHeader className="pb-2"><CardDescription>Received</CardDescription></CardHeader>
+                <CardHeader className="pb-2"><CardDescription>Received<InfoTip text="Total payments successfully collected" /></CardDescription></CardHeader>
                 <CardContent><div className="text-2xl font-bold text-green-700">{formatCurrency(paymentData?.summary?.totalReceived || 0)}</div></CardContent>
               </Card>
               <Card className="bg-yellow-50">
-                <CardHeader className="pb-2"><CardDescription>Pending</CardDescription></CardHeader>
+                <CardHeader className="pb-2"><CardDescription>Pending<InfoTip text="Payments awaiting confirmation or COD collection" /></CardDescription></CardHeader>
                 <CardContent><div className="text-2xl font-bold text-yellow-700">{formatCurrency(paymentData?.summary?.totalPending || 0)}</div></CardContent>
               </Card>
               <Card>
-                <CardHeader className="pb-2"><CardDescription>Failed</CardDescription></CardHeader>
+                <CardHeader className="pb-2"><CardDescription>Failed<InfoTip text="Payments that failed or were declined" /></CardDescription></CardHeader>
                 <CardContent><div className="text-2xl font-bold text-red-600">{formatCurrency(paymentData?.summary?.totalFailed || 0)}</div></CardContent>
               </Card>
               <Card>
-                <CardHeader className="pb-2"><CardDescription>Refunded</CardDescription></CardHeader>
+                <CardHeader className="pb-2"><CardDescription>Refunded<InfoTip text="Total amount refunded to customers" /></CardDescription></CardHeader>
                 <CardContent><div className="text-2xl font-bold text-purple-600">{formatCurrency(paymentData?.summary?.totalRefunded || 0)}</div></CardContent>
               </Card>
             </div>
