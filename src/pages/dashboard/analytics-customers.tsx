@@ -24,11 +24,13 @@ const AnalyticsCustomers = () => {
     endDate: initialEnd.format("YYYY-MM-DD"),
   });
 
-  const { data: repeatData, isLoading: isLoadingRepeat } = useRepeatPurchaseRate(dateRange);
-  const { data: cohortData, isLoading: isLoadingCohort } = useCustomerCohorts();
+  const { data: repeatRaw, isLoading: isLoadingRepeat } = useRepeatPurchaseRate(dateRange);
+  const { data: cohortRaw, isLoading: isLoadingCohort } = useCustomerCohorts();
   const { data: topUsersData, isLoading: isLoadingUsers } = useTopUsers(dateRange);
 
-  const cohorts: any[] = Array.isArray(cohortData) ? cohortData : [];
+  // Hooks return { data: actualValue } — unwrap one extra level
+  const repeatData = repeatRaw?.data ?? repeatRaw;
+  const cohorts: any[] = Array.isArray(cohortRaw) ? cohortRaw : (cohortRaw?.data ?? []);
   const topUsers: any[] = Array.isArray(topUsersData) ? topUsersData : (topUsersData?.data ?? []);
 
   return (

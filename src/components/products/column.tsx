@@ -44,13 +44,14 @@ export const ProductColumns: ColumnDef<Product>[] = [
     ),
   },
   {
-    accessorKey: "category",
+    accessorKey: "categoryId",
     header: "Category",
     cell: ({ row }) => {
-      const category: any = row.original.category;
+      const categoryId: any = row.original.categoryId;
+      const categoryName = typeof categoryId === 'object' ? categoryId?.name : '—';
       return (
         <span className="text-sm text-muted-foreground">
-          {category?.name ?? "—"}
+          {categoryName ?? "—"}
         </span>
       );
     },

@@ -7,10 +7,11 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Clock, Package, TrendingUp, TrendingDown, RefreshCw, Eye } from "lucide-react";
+import { AlertTriangle, Clock, Package, TrendingUp, RefreshCw, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency, InfoTip } from "@/lib/analytics-utils";
+import { useNavigate } from "react-router-dom";
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleString('en-IN', {
@@ -20,19 +21,6 @@ const formatDate = (dateString: string) => {
     hour: '2-digit',
     minute: '2-digit'
   });
-};
-
-const getVolatilityColor = (change: number) => {
-  if (change > 2) return "text-red-600";
-  if (change > 0) return "text-orange-600";
-  if (change < -2) return "text-green-600";
-  return "text-gray-600";
-};
-
-const getVolatilityIcon = (change: number) => {
-  if (change > 0) return <TrendingUp className="h-4 w-4" />;
-  if (change < 0) return <TrendingDown className="h-4 w-4" />;
-  return null;
 };
 
 const DashboardKPIs = () => {
@@ -158,35 +146,6 @@ const DashboardKPIs = () => {
         </Card>
       </div>
 
-      {/* Metal Rates Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <RefreshCw className="h-5 w-5" />
-            Live Metal Rates
-          </CardTitle>
-          <CardDescription>
-            Current rates with 24h change. Last updated: {kpis?.metalVolatility?.GOLD_24K?.lastUpdated ? formatDate(kpis.metalVolatility.GOLD_24K.lastUpdated) : 'Never'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {Object.entries(kpis?.metalVolatility || {}).map(([metalType, data]: [string, any]) => {
-              const displayName = metalType.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-              return (
-                <div key={metalType} className="text-center p-4 border rounded-lg">
-                  <div className="text-sm font-medium text-muted-foreground">{displayName}</div>
-                  <div className="text-2xl font-bold">{formatCurrency(data.current)}</div>
-                  <div className={`text-sm flex items-center justify-center gap-1 ${getVolatilityColor(data.change24h)}`}>
-                    {getVolatilityIcon(data.change24h)}
-                    {data.change24h > 0 ? '+' : ''}{data.change24h}%
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
@@ -194,6 +153,7 @@ const DashboardKPIs = () => {
 // Dialog Components
 const PendingOrdersDialog = () => {
   const { data: ordersData } = usePendingOrdersDetails(24);
+  const navigate = useNavigate();
 
   return (
     <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -217,13 +177,15 @@ const PendingOrdersDialog = () => {
           {ordersData?.data?.map((order: any) => (
             <TableRow key={order._id}>
               <TableCell className="font-mono">{order._id.slice(-8)}</TableCell>
-              <TableCell>{order.buyer?.displayName || 'N/A'}</TableCell>
+              <TableCell>{order.buyer?.name || order.buyer?.displayName || 'N/A'}</TableCell>
               <TableCell>{formatDate(order.createdAt)}</TableCell>
               <TableCell>
                 <Badge variant="secondary">{order.order_status}</Badge>
               </TableCell>
               <TableCell>
-                <Button variant="outline" size="sm">View Order</Button>
+                <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/orders/${order._id}`)}>
+                  View Order
+                </Button>
               </TableCell>
             </TableRow>
           ))}

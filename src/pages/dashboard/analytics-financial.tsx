@@ -23,11 +23,18 @@ const AnalyticsFinancial = () => {
     endDate: initialEnd.format("YYYY-MM-DD"),
   });
 
-  const { data: financialData, isLoading: isLoadingFinancial } = useFinancialSummary(dateRange);
-  const { data: taxData, isLoading: isLoadingTax } = useTaxSummary(dateRange);
-  const { data: couponData, isLoading: isLoadingCoupon } = useCouponAnalytics(dateRange);
-  const { data: loyaltyData, isLoading: isLoadingLoyalty } = useLoyaltyLiability(dateRange);
-  const { data: paymentData, isLoading: isLoadingPayment } = usePaymentReconciliation(dateRange);
+  const { data: financialRaw, isLoading: isLoadingFinancial } = useFinancialSummary(dateRange);
+  const { data: taxRaw, isLoading: isLoadingTax } = useTaxSummary(dateRange);
+  const { data: couponRaw, isLoading: isLoadingCoupon } = useCouponAnalytics(dateRange);
+  const { data: loyaltyRaw, isLoading: isLoadingLoyalty } = useLoyaltyLiability(dateRange);
+  const { data: paymentRaw, isLoading: isLoadingPayment } = usePaymentReconciliation(dateRange);
+
+  // Hooks return { data: actualValue } — unwrap one extra level
+  const financialData = financialRaw?.data ?? financialRaw;
+  const taxData = taxRaw?.data ?? taxRaw;
+  const couponData = couponRaw?.data ?? couponRaw;
+  const loyaltyData = loyaltyRaw?.data ?? loyaltyRaw;
+  const paymentData = paymentRaw?.data ?? paymentRaw;
   const exportMutation = useExportFinancialData();
 
   const handleExport = async () => {

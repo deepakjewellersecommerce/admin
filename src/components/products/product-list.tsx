@@ -1,5 +1,6 @@
 
 import { useEffect, useRef, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import LoadingScreen from "../common/loading-screen";
 import DataTable from "../table/data-table-server";
 import Product from "./product";
@@ -11,7 +12,7 @@ import { useGetAllMaterials, useGetAllGenders, useGetAllItems, useGetAllCategori
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { Package, BarChart3, ChevronRight, X, Filter } from "lucide-react";
+import { Package, BarChart3, ChevronRight, X, Filter, Plus } from "lucide-react";
 import { Button } from "../ui/button";
 
 type TableFilter = {
@@ -24,6 +25,7 @@ type TableFilter = {
 const formatNumber = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 
 const ProductList = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState<string>("");
   const searchInput = useRef<HTMLInputElement>();
   const [products, setproducts] = useState<Product[]>([]);
@@ -404,14 +406,23 @@ const ProductList = () => {
 
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <CardTitle className="text-lg">All Products</CardTitle>
-            <Input
-              value={search}
-              placeholder="Search products..."
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-72 h-9"
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                value={search}
+                placeholder="Search products..."
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-72 h-9"
+              />
+              <Button
+                className="flex items-center gap-2"
+                onClick={() => navigate("/dashboard/products/add")}
+              >
+                <Plus className="h-4 w-4" />
+                Add Product
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">

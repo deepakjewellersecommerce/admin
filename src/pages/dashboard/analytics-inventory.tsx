@@ -17,12 +17,15 @@ import {
 import { PackageSearch, AlertTriangle, RefreshCw } from "lucide-react";
 
 const AnalyticsInventory = () => {
-  const { data: healthData, isLoading: isLoadingHealth } = useInventoryHealth();
-  const { data: turnoverData, isLoading: isLoadingTurnover } = useStockTurnover();
-  const { data: trendData, isLoading: isLoadingTrend } = useInventoryValuationTrend();
+  const { data: healthRaw, isLoading: isLoadingHealth } = useInventoryHealth();
+  const { data: turnoverRaw, isLoading: isLoadingTurnover } = useStockTurnover();
+  const { data: trendRaw, isLoading: isLoadingTrend } = useInventoryValuationTrend();
 
+  // Hooks return { data: actualValue } — unwrap one extra level
+  const healthData = healthRaw?.data ?? healthRaw;
+  const trendData = trendRaw?.data ?? trendRaw;
   const inventoryStats = healthData ?? { valuation: 0, totalStockCount: 0, stuckStock: { count: 0, items: [] } };
-  const turnoverList: any[] = Array.isArray(turnoverData) ? turnoverData : [];
+  const turnoverList: any[] = Array.isArray(turnoverRaw) ? turnoverRaw : (turnoverRaw?.data ?? []);
 
   return (
     <div className="space-y-6">

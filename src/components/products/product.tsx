@@ -12,7 +12,7 @@ interface Product {
   productTitle: string;
   productSlug: string;
   skuNo: string;
-  category?: string; // Assuming category is a string ID. Adjust type if necessary.
+  categoryId?: { _id: string; name: string; description?: string; displayImage?: string } | string;
   regularPrice: number;
   salePrice: number;
   images?: any[];

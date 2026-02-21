@@ -17,15 +17,12 @@ import {
   Check,
   X,
   LucideIcon,
-  IndianRupee,
   TrendingUp,
   TrendingDown,
   Gem,
   AlertTriangle,
   Star,
   Users,
-  Calendar,
-  Coins,
   RefreshCw,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -88,13 +85,6 @@ const DashboardHome = () => {
     { title: "Canceled Orders", value: "0", icon: X, tooltip: "Orders canceled by customer or admin" },
   ], []);
 
-  const defaultRevenueMetrics = useMemo(() => [
-    { title: "Revenue", value: "₹0", icon: IndianRupee, tooltip: "Total revenue from all orders in the selected period" },
-    { title: "Orders (Revenue)", value: "0", icon: Calendar, tooltip: "Number of orders contributing to revenue" },
-    { title: "Total Revenue", value: "₹0", icon: TrendingUp, tooltip: "Cumulative revenue across all time" },
-    { title: "Avg Order Value", value: "₹0", icon: Coins, tooltip: "Average amount per order (total revenue / order count)" },
-  ], []);
-
   const defaultProductMetrics = useMemo(() => [
     { title: "Total Products", value: "0", icon: ShoppingCart, tooltip: "Total products in your catalog" },
     { title: "Active Products", value: "0", icon: Check, tooltip: "Products currently visible and available for purchase" },
@@ -116,25 +106,25 @@ const DashboardHome = () => {
   // Revenue trend & repeat rate for growth KPIs
   const { data: trendsRaw } = useRevenueTrends({ ...dateRange, groupBy });
   const { data: repeatRaw } = useRepeatPurchaseRate(dateRange);
-  const { data: kpiData } = useDashboardKPIs();
+  const { data: kpiRaw } = useDashboardKPIs();
 
-  // Unwrap nested data
+  // Unwrap nested data (hooks return { data: actualValue }, so unwrap one level)
   const trendsData = trendsRaw?.data ?? trendsRaw;
   const repeatData = repeatRaw?.data ?? repeatRaw;
+  const kpiData = kpiRaw?.data ?? kpiRaw;
 
   const lowStockItems = useMemo(() => lowStockData?.data?.data?.items || [], [lowStockData]);
   const metalPrices = useMemo(() => metalPricesData?.data?.prices || metalPricesData?.prices || [], [metalPricesData]);
 
-  const { orderMetrics, revenueMetrics, productMetrics, customerMetrics } = useMemo(() => {
+  const { orderMetrics, productMetrics, customerMetrics } = useMemo(() => {
     if (data?.data?.data) {
       return {
         orderMetrics: data.data.data.orderMetrics ?? [],
-        revenueMetrics: data.data.data.revenueMetrics ?? [],
         productMetrics: data.data.data.productMetrics ?? [],
         customerMetrics: data.data.data.customerMetrics ?? [],
       };
     }
-    return { orderMetrics: [], revenueMetrics: [], productMetrics: [], customerMetrics: [] };
+    return { orderMetrics: [], productMetrics: [], customerMetrics: [] };
   }, [data]);
 
   const mergeMetrics = (defaults: any[], api: any[]) =>
@@ -144,7 +134,6 @@ const DashboardHome = () => {
       value: api[i]?.value || d.value,
     }));
   const displayOrderMetrics = useMemo(() => mergeMetrics(defaultOrderMetrics, orderMetrics), [defaultOrderMetrics, orderMetrics]);
-  const displayRevenueMetrics = useMemo(() => mergeMetrics(defaultRevenueMetrics, revenueMetrics), [defaultRevenueMetrics, revenueMetrics]);
   const displayProductMetrics = useMemo(() => mergeMetrics(defaultProductMetrics, productMetrics), [defaultProductMetrics, productMetrics]);
   const displayCustomerMetrics = useMemo(() => mergeMetrics(defaultCustomerMetrics, customerMetrics), [defaultCustomerMetrics, customerMetrics]);
 
@@ -254,7 +243,7 @@ const DashboardHome = () => {
       </Card>
 
       {/* KPI Alerts Banner */}
-      {kpiData && (kpiData.alerts?.pendingOrders > 0 || kpiData.alerts?.stockOutOrders > 0 || kpiData.alerts?.pricingErrors > 0) && (
+      {kpiData && ((kpiData.alerts?.pendingOrders?.total ?? kpiData.alerts?.pendingOrders ?? 0) > 0 || kpiData.alerts?.stockOutOrders > 0 || kpiData.alerts?.pricingErrors > 0) && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center gap-2 mb-2">
@@ -262,9 +251,9 @@ const DashboardHome = () => {
               <span className="font-semibold text-amber-800 text-sm">Action Required</span>
             </div>
             <div className="flex flex-wrap gap-4">
-              {kpiData.alerts.pendingOrders > 0 && (
+              {(kpiData.alerts?.pendingOrders?.total ?? kpiData.alerts?.pendingOrders ?? 0) > 0 && (
                 <div className="flex items-center gap-2 text-sm">
-                  <Badge variant="destructive">{kpiData.alerts.pendingOrders}</Badge>
+                  <Badge variant="destructive">{kpiData.alerts.pendingOrders?.total ?? kpiData.alerts.pendingOrders}</Badge>
                   <span className="text-amber-900">orders pending &gt;24h</span>
                 </div>
               )}
@@ -348,19 +337,6 @@ const DashboardHome = () => {
       {!isLoadingLowStock && lowStockItems.length > 0 && (
         <LowStockAlert items={lowStockItems} threshold={5} />
       )}
-
-      {/* Revenue Metrics */}
-      <section>
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <IndianRupee className="h-5 w-5" />
-          Revenue & Sales
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {displayRevenueMetrics.map((metric: { icon: LucideIcon; title: string; value: string; tooltip?: string }, index: number) => (
-            <DashboardCard key={index} Icon={metric.icon} title={metric.title} value={metric.value} tooltip={metric.tooltip} />
-          ))}
-        </div>
-      </section>
 
       {/* Order Metrics */}
       <section>
