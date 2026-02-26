@@ -1,5 +1,6 @@
-import { useAddCoupon } from "@/lib/react-query/coupon-query"; // Adjust the import path as needed
-import CouponForm, { CouponType } from "./coupon-form"; // Adjust the import path to your CouponForm component
+import { useAddCoupon } from "@/lib/react-query/coupon-query";
+import { useNavigate } from "react-router";
+import CouponForm, { CouponType } from "./coupon-form";
 
 const defaultValues: CouponType = {
   couponCode: "",
@@ -11,6 +12,7 @@ const defaultValues: CouponType = {
 };
 
 const AddCouponForm = () => {
+  const navigate = useNavigate();
   const { mutate, isPending } = useAddCoupon();
 
   const onSubmit = (data: any) => {
@@ -20,6 +22,10 @@ const AddCouponForm = () => {
       minCartAmount: parseInt(data.minCartAmount),
       discount: parseInt(data.discount),
       couponQuantity: parseInt(data.couponQuantity),
+    }, {
+      onSuccess: () => {
+        setTimeout(() => navigate("/dashboard/coupons/list"), 600);
+      },
     });
   };
 

@@ -1,16 +1,21 @@
 import { useGetBlog, useUpdateBlog } from "@/lib/react-query/blog-query";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import LoadingScreen from "../common/loading-screen";
 import BlogForm from "./blog-form";
 import { useMemo } from "react";
 
 const UpdateBlogForm = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { data: blogData, isLoading } = useGetBlog(id ?? "");
   const { mutate, isPending } = useUpdateBlog();
 
   const onSubmit = (data: any) => {
-    mutate({ ...data, _id: id });
+    mutate({ ...data, _id: id }, {
+      onSuccess: () => {
+        setTimeout(() => navigate("/dashboard/blogs/list"), 600);
+      },
+    });
   };
 
   const defaultValues: any = useMemo(() => {

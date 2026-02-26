@@ -38,8 +38,11 @@ export const useUpdateBlog = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: blogAPI.updateBlog,
-    onSuccess: () => {
+    onSuccess: (_data, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ["blogs"] });
+      if (variables?._id || variables?.id) {
+        queryClient.invalidateQueries({ queryKey: ["blog", variables._id || variables.id] });
+      }
       toast.success("Successfully Updated!");
     },
     onError: (error: any) => {

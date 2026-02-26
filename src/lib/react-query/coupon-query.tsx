@@ -42,10 +42,11 @@ export const useUpdateCoupon = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: couponAPI.updateCoupon,
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["coupons"],
-      });
+    onSuccess: (_data, variables: any) => {
+      queryClient.invalidateQueries({ queryKey: ["coupons"] });
+      if (variables?._id || variables?.id) {
+        queryClient.invalidateQueries({ queryKey: ["coupon", variables._id || variables.id] });
+      }
       toast.success("Coupon successfully Updated!");
     },
     onError: (error: any) => {

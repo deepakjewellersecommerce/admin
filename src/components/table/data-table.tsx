@@ -61,8 +61,8 @@ export function DataTable<TData, TValue>({
                 data-state={row.getIsSelected() && "selected"}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <ErrorBoundary>
-                    <TableCell key={cell.id}>
+                  <ErrorBoundary key={cell.id}>
+                    <TableCell>
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()

@@ -1,10 +1,16 @@
 import { useAddBlog } from "@/lib/react-query/blog-query";
+import { useNavigate } from "react-router";
 import BlogForm from "./blog-form";
 
 const AddBlogForm = () => {
+  const navigate = useNavigate();
   const { mutate, isPending } = useAddBlog();
   const onSubmit = (data: any) => {
-    mutate(data);
+    mutate(data, {
+      onSuccess: () => {
+        setTimeout(() => navigate("/dashboard/blogs/list"), 600);
+      },
+    });
   };
   return (
     <section className="flex flex-col space-y-4">

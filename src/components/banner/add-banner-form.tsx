@@ -4,12 +4,22 @@ import { toast } from "sonner";
 import BannerForm from "./banner-form"; // Assuming you have a BannerForm component defined
 import BannerPreview from "./banner-preview";
 import React from "react";
+import { useNavigate } from "react-router";
 
 const AddBannerForm = () => {
-  const { mutate, isPending } = useAddBanner();
+  const navigate = useNavigate();
+  const { mutate: mutateBase, isPending } = useAddBanner();
   const [previewData, setPreviewData] = React.useState<{ title?: string; content?: string; images?: any[] }>({});
-  
+
   const uploadMutation = useUploadImage();
+
+  const mutate = (payload: any) => {
+    mutateBase(payload, {
+      onSuccess: () => {
+        setTimeout(() => navigate("/dashboard/banners/list"), 600);
+      },
+    });
+  };
 
   const onSubmit = async (data: any) => {
     const images = data.bannerImages ?? data.images ?? [];

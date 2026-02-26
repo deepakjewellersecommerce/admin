@@ -1,17 +1,26 @@
 import { useGetBanner, useUpdateBanner } from "@/lib/react-query/banner-query"; // Assuming you have these hooks defined
 import { useUploadImage } from "@/lib/react-query/auth-query";
 import { toast } from "sonner";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import LoadingScreen from "../common/loading-screen";
 import BannerForm from "./banner-form"; // Assuming you have a BannerForm component defined
 import { useMemo } from "react";
 
 const UpdateBannerForm = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { data: bannerData, isLoading } = useGetBanner(id ?? "");
-  const { mutate, isPending } = useUpdateBanner();
+  const { mutate: mutateBase, isPending } = useUpdateBanner();
 
   const uploadMutation = useUploadImage();
+
+  const mutate = (payload: any) => {
+    mutateBase(payload, {
+      onSuccess: () => {
+        setTimeout(() => navigate("/dashboard/banners/list"), 600);
+      },
+    });
+  };
 
   const onSubmit = async (data: any) => {
     const images = data.bannerImages ?? data.images ?? [];

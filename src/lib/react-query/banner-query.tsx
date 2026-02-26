@@ -38,8 +38,11 @@ export const useUpdateBanner = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: bannerAPI.updateBanner,
-    onSuccess: () => {
+    onSuccess: (_data, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ["banners"] });
+      if (variables?._id || variables?.id) {
+        queryClient.invalidateQueries({ queryKey: ["banner", variables._id || variables.id] });
+      }
       toast.success("Successfully Updated!");
     },
     onError: (error: any) => {

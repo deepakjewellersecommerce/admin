@@ -1,11 +1,12 @@
 import { useMemo } from "react";
-import { useParams } from "react-router";
-import { useGetColorById, useUpdateColor } from "@/lib/react-query/color-query"; // Assuming you have hooks for fetching and updating color data
+import { useParams, useNavigate } from "react-router";
+import { useGetColorById, useUpdateColor } from "@/lib/react-query/color-query";
 import LoadingScreen from "../common/loading-screen";
-import ColorForm, { ColorType } from "../colors/color-form"; // Assuming you have a component for rendering color form
+import ColorForm, { ColorType } from "../colors/color-form";
 
 const EditColorForm = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { data } = useGetColorById(id ?? "");
 
   const { mutate, isPending } = useUpdateColor();
@@ -25,7 +26,11 @@ const EditColorForm = () => {
   if (!defaultValues) return <LoadingScreen />;
 
   const onSubmit = (values: any) => {
-    mutate({ ...values, _id: id });
+    mutate({ ...values, _id: id }, {
+      onSuccess: () => {
+        setTimeout(() => navigate("/dashboard/colors/list"), 600);
+      },
+    });
   };
 
   return (

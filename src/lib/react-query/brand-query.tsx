@@ -37,8 +37,11 @@ export const useUpdateBrand = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: brandAPI.updateBrand,
-    onSuccess: () => {
+    onSuccess: (_data, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ["brands"] });
+      if (variables?._id || variables?.id) {
+        queryClient.invalidateQueries({ queryKey: ["brand", variables._id || variables.id] });
+      }
       toast.success("Successfully Updated!");
     },
     onError: (error: any) => {

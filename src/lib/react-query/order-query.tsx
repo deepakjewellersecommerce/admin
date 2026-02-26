@@ -31,10 +31,15 @@ export const useUpdateOrder = () => {
   return useMutation({
     mutationKey: ["order", "update"],
     mutationFn: (data: any) => orderAPI.updateOrder(data),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: ["orders"],
       });
+      if (variables?._id) {
+        queryClient.invalidateQueries({
+          queryKey: ["order", variables._id],
+        });
+      }
     },
   });
 };

@@ -30,8 +30,11 @@ export const useUpdateColor = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: colorAPI.updateColor,
-    onSuccess: () => {
+    onSuccess: (_data, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ["colors"] });
+      if (variables?._id || variables?.id) {
+        queryClient.invalidateQueries({ queryKey: ["color", variables._id || variables.id] });
+      }
       toast.success("Successfully Updated!");
     },
     onError: (error: any) => {

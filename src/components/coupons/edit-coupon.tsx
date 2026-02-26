@@ -1,11 +1,12 @@
 import { useMemo } from "react";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import { useGetCoupon, useUpdateCoupon } from "@/lib/react-query/coupon-query";
 import LoadingScreen from "../common/loading-screen";
 import CouponForm from "../coupons/coupon-form";
 
 const EditCouponForm = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { data } = useGetCoupon(id);
 
   const { mutate, isPending } = useUpdateCoupon();
@@ -29,7 +30,11 @@ const EditCouponForm = () => {
   if (!defaultValues) return <LoadingScreen />;
 
   const onSubmit = (values: any) => {
-    mutate({ ...values, _id: id });
+    mutate({ ...values, _id: id }, {
+      onSuccess: () => {
+        setTimeout(() => navigate("/dashboard/coupons/list"), 600);
+      },
+    });
   };
 
   return (
