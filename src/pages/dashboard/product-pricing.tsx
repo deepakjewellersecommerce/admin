@@ -32,6 +32,16 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ArrowLeft,
   DollarSign,
   Lock,
@@ -48,6 +58,8 @@ import {
   useCustomizePricing,
   useRevertToSubcategoryPricing,
   useUpdateProductPricingConfig,
+  useFreezeProductComponent,
+  useUnfreezeProductComponent,
 } from "@/lib/react-query/product-pricing-query";
 import { useGetCalculationTypes } from "@/lib/react-query/price-component-query";
 import { ProductPricingComponent } from "@/lib/axios/product-pricing-API";
@@ -61,48 +73,57 @@ const ProductPricingPage = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewNetWeight, setPreviewNetWeight] = useState<number>(0);
   const [previewMetalRate, setPreviewMetalRate] = useState<number>(0);
+  const [showRevertConfirm, setShowRevertConfirm] = useState(false);
 
   // Queries
-  const { data: summaryData, isLoading: isLoadingSummary, refetch: refetchSummary } = useGetPricingSummary(productId || "");
+  const { data: summaryData, isLoading: isLoadingSummary, refetch: refetchSummary } =
+    useGetPricingSummary(productId || "");
   const { data: calculationTypesData } = useGetCalculationTypes();
 
   // Mutations
   const { mutate: customizePricing, isPending: isCustomizing } = useCustomizePricing();
   const { mutate: revertPricing, isPending: isReverting } = useRevertToSubcategoryPricing();
   const { mutate: updateConfig, isPending: isUpdating } = useUpdateProductPricingConfig();
+  const { mutate: freezeComponent, isPending: isFreezing } = useFreezeProductComponent();
+  const { mutate: unfreezeComponent, isPending: isUnfreezing } = useUnfreezeProductComponent();
 
   const calculationTypes = calculationTypesData?.data?.types || [];
 
-  // Extract data from summary
-  const product = summaryData?.data?.product || summaryData?.product;
-  const pricing = summaryData?.data?.pricing || summaryData?.pricing;
-  const breakdown = summaryData?.data?.breakdown || summaryData?.breakdown;
-  const metalRate = summaryData?.data?.metalRate || summaryData?.metalRate;
+  // Extract data — backend wraps in successRes → { status, data: { ... } }
+  // axios returns response.data, so summaryData = { status, data: { product, pricing, ... } }
+  const product = summaryData?.data?.product;
+  const pricing = summaryData?.data?.pricing;
+  const breakdown = summaryData?.data?.breakdown;
+  const metalRate = summaryData?.data?.metalRate;
+  const pricingConfig = summaryData?.data?.pricingConfig;
 
   const pricingMode = product?.pricingMode || pricing?.mode || "SUBCATEGORY_DYNAMIC";
   const isCustomDynamic = pricingMode === "CUSTOM_DYNAMIC";
+  const isStaticPrice = pricingMode === "STATIC_PRICE";
 
-  // Initialize component state from breakdown
+  // Seed component state from the effective pricing config (formula definitions)
+  // For CUSTOM_DYNAMIC: product.pricingConfig.components (editable formula params)
+  // For SUBCATEGORY_DYNAMIC: inherited subcategory config (read-only formula params)
+  // For STATIC_PRICE: nothing to seed (no components)
   useEffect(() => {
-    if (breakdown?.components) {
-      setPricingComponents(breakdown.components);
-      setPreviewNetWeight(product?.netWeight || 1);
-      setPreviewMetalRate(metalRate?.pricePerGram || 0);
-    }
-  }, [breakdown, product, metalRate]);
+    if (!product) return;
+    setPreviewNetWeight(product.netWeight || 1);
+    setPreviewMetalRate(metalRate?.pricePerGram || 0);
 
-  // Handle component changes
+    if (pricingConfig?.components?.length) {
+      setPricingComponents(pricingConfig.components);
+    }
+  }, [product, metalRate, pricingConfig]);
+
+  // Handle component changes (CUSTOM_DYNAMIC only)
   const handleComponentChange = (componentKey: string, field: string, value: any) => {
     setPricingComponents((prev) =>
       prev.map((comp) => {
         if (comp.componentKey === componentKey) {
           const updated = { ...comp, [field]: value };
-          // Auto-fill current metal rate when switching to MANUAL mode
           if (field === "metalPriceMode" && value === "MANUAL") {
-            // Only fill if it's currently empty/0 or if we're specifically switching to MANUAL
-            const currentRate = previewMetalRate || 0;
             if (!updated.manualMetalPrice || updated.manualMetalPrice === 0) {
-              updated.manualMetalPrice = currentRate;
+              updated.manualMetalPrice = previewMetalRate || 0;
             }
           }
           return updated;
@@ -114,88 +135,99 @@ const ProductPricingPage = () => {
   };
 
   // Calculate component value locally
-  const calculateComponentValue = useCallback((component: ProductPricingComponent, context: any) => {
-    const { netWeight, metalRate, metalCost, subtotal } = context;
+  const calculateComponentValue = useCallback(
+    (component: ProductPricingComponent, context: any) => {
+      const { netWeight, metalRate, metalCost, subtotal } = context;
 
-    // Metal cost component
-    if (component.componentKey === "metal_cost") {
-      if (component.metalPriceMode === "MANUAL" && component.manualMetalPrice) {
-        return component.manualMetalPrice * netWeight;
-      }
-      return netWeight * metalRate;
-    }
-
-    switch (component.calculationType) {
-      case "PER_GRAM":
-        return netWeight * (component.value || 1);
-      case "PERCENTAGE":
-        const base = component.percentageOf === "subtotal" ? subtotal : metalCost;
-        return (base * (component.value || 0)) / 100;
-      case "FIXED":
-        return component.value || 0;
-      default:
-        return 0;
-    }
-  }, []);
-
-  // Compute live breakdown
-  const computeBreakdown = useCallback((isCustomerView = false) => {
-    let subtotal = 0;
-    let metalCost = 0;
-    let hiddenValueTotal = 0;
-    let metalCostIndex = -1;
-
-    const comps: any[] = [];
-
-    const sorted = [...pricingComponents].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-
-    for (const comp of sorted) {
-      if (!comp.isActive) continue;
-
-      let value = comp.isFrozen
-        ? comp.frozenValue || 0
-        : calculateComponentValue(comp, {
-            netWeight: previewNetWeight,
-            metalRate: previewMetalRate,
-            metalCost,
-            subtotal,
-          });
-
-      value = Math.round(value * 100) / 100;
-
-      if (comp.componentKey === "metal_cost") {
-        metalCost = value;
-        metalCostIndex = comps.length;
+      if (component.componentKey === "metal_cost") {
+        if (component.metalPriceMode === "MANUAL" && component.manualMetalPrice) {
+          return component.manualMetalPrice * netWeight;
+        }
+        return netWeight * metalRate;
       }
 
-      comps.push({ ...comp, calculatedValue: value });
-      subtotal += value;
-    }
+      switch (component.calculationType) {
+        case "PER_GRAM":
+          return netWeight * (component.value || 1);
+        case "PERCENTAGE": {
+          const base = component.percentageOf === "subtotal" ? subtotal : metalCost;
+          return (base * (component.value || 0)) / 100;
+        }
+        case "FIXED":
+          return component.value || 0;
+        default:
+          return 0;
+      }
+    },
+    []
+  );
 
-    // Merge hidden components into metal_cost for customer view consistency
-    if (isCustomerView && metalCostIndex !== -1) {
-      for (let i = 0; i < comps.length; i++) {
-        if (i !== metalCostIndex && !comps[i].isVisible) {
-          hiddenValueTotal += comps[i].calculatedValue;
-          comps[i].calculatedValue = 0;
+  // Compute live breakdown — pricingComponents must contain formula config (isActive present)
+  const computeBreakdown = useCallback(
+    (isCustomerView = false) => {
+      let subtotal = 0;
+      let metalCost = 0;
+      let hiddenValueTotal = 0;
+      let metalCostIndex = -1;
+
+      const comps: any[] = [];
+
+      const sorted = [...pricingComponents].sort(
+        (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)
+      );
+
+      for (const comp of sorted) {
+        // Only skip if isActive is explicitly false (undefined = active)
+        if (comp.isActive === false) continue;
+
+        let value = comp.isFrozen
+          ? comp.frozenValue || 0
+          : calculateComponentValue(comp, {
+              netWeight: previewNetWeight,
+              metalRate: previewMetalRate,
+              metalCost,
+              subtotal,
+            });
+
+        value = Math.round(value * 100) / 100;
+
+        if (comp.componentKey === "metal_cost") {
+          metalCost = value;
+          metalCostIndex = comps.length;
+        }
+
+        comps.push({ ...comp, calculatedValue: value });
+        subtotal += value;
+      }
+
+      if (isCustomerView && metalCostIndex !== -1) {
+        for (let i = 0; i < comps.length; i++) {
+          if (i !== metalCostIndex && !comps[i].isVisible) {
+            hiddenValueTotal += comps[i].calculatedValue;
+            comps[i].calculatedValue = 0;
+          }
+        }
+
+        if (hiddenValueTotal > 0) {
+          comps[metalCostIndex].calculatedValue = Math.round(
+            (comps[metalCostIndex].calculatedValue + hiddenValueTotal) * 100
+          ) / 100;
+          comps[metalCostIndex].componentName = "Unit Cost";
+          metalCost = comps[metalCostIndex].calculatedValue;
         }
       }
 
-      if (hiddenValueTotal > 0) {
-        comps[metalCostIndex].calculatedValue =
-          Math.round((comps[metalCostIndex].calculatedValue + hiddenValueTotal) * 100) / 100;
-        comps[metalCostIndex].componentName = "Unit Cost";
-        metalCost = comps[metalCostIndex].calculatedValue;
-      }
-    }
-
-    return {
-      components: isCustomerView ? comps.filter(c => c.isVisible || c.componentKey === "metal_cost") : comps,
-      subtotal: Math.round(subtotal * 100) / 100,
-      metalCost,
-      hasHiddenComponents: hiddenValueTotal > 0
-    };
-  }, [pricingComponents, previewNetWeight, previewMetalRate, calculateComponentValue]);
+      return {
+        components: isCustomerView
+          ? comps.filter((c) => c.isVisible || c.componentKey === "metal_cost")
+          : comps,
+        subtotal: Math.round(subtotal * 100) / 100,
+        metalCost,
+        hasHiddenComponents: hiddenValueTotal > 0,
+      };
+    },
+    [pricingComponents, previewNetWeight, previewMetalRate, calculateComponentValue]
+  );
 
   const liveBreakdown = computeBreakdown(false);
   const customerBreakdown = computeBreakdown(true);
@@ -211,10 +243,15 @@ const ProductPricingPage = () => {
   };
 
   const handleRevert = () => {
+    setShowRevertConfirm(true);
+  };
+
+  const confirmRevert = () => {
     if (!productId) return;
     revertPricing(productId, {
       onSuccess: () => {
         setHasUnsavedChanges(false);
+        setShowRevertConfirm(false);
         refetchSummary();
       },
     });
@@ -250,6 +287,22 @@ const ProductPricingPage = () => {
     );
   };
 
+  const handleFreeze = (componentKey: string) => {
+    if (!productId) return;
+    freezeComponent(
+      { productId, componentKey },
+      { onSuccess: () => refetchSummary() }
+    );
+  };
+
+  const handleUnfreeze = (componentKey: string) => {
+    if (!productId) return;
+    unfreezeComponent(
+      { productId, componentKey },
+      { onSuccess: () => refetchSummary() }
+    );
+  };
+
   if (isLoadingSummary) {
     return (
       <div className="space-y-6 max-w-4xl">
@@ -276,6 +329,25 @@ const ProductPricingPage = () => {
 
   return (
     <div className="space-y-6 max-w-4xl">
+      {/* Revert confirmation dialog */}
+      <AlertDialog open={showRevertConfirm} onOpenChange={setShowRevertConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revert to Subcategory Pricing?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this product's custom pricing configuration. The
+              product will inherit pricing from its subcategory. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isReverting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRevert} disabled={isReverting}>
+              {isReverting ? "Reverting..." : "Yes, Revert"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
@@ -313,7 +385,11 @@ const ProductPricingPage = () => {
             </div>
             <div>
               <p className="text-muted-foreground">Current Price</p>
-              <p className="font-medium">₹{product.calculatedPrice?.toFixed(2) || "0.00"}</p>
+              <p className="font-medium">
+                {product.calculatedPrice
+                  ? `₹${product.calculatedPrice.toFixed(2)}`
+                  : <span className="text-muted-foreground">Not yet calculated</span>}
+              </p>
             </div>
           </div>
         </CardContent>
@@ -325,18 +401,24 @@ const ProductPricingPage = () => {
           <CardTitle className="flex items-center justify-between">
             <span>Pricing Configuration</span>
             <Badge variant={isCustomDynamic ? "default" : "secondary"}>
-              {isCustomDynamic ? "Custom Pricing" : "Inherits from Subcategory"}
+              {isCustomDynamic
+                ? "Custom Pricing"
+                : isStaticPrice
+                ? "Static Price"
+                : "Inherits from Subcategory"}
             </Badge>
           </CardTitle>
           <CardDescription>
             {isCustomDynamic
               ? "This product has its own custom pricing configuration."
+              : isStaticPrice
+              ? "This product has a fixed price that does not change with metal rates."
               : "This product inherits pricing from its subcategory."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2">
-            {!isCustomDynamic && (
+            {!isCustomDynamic && !isStaticPrice && (
               <Button onClick={handleCustomize} disabled={isCustomizing}>
                 {isCustomizing ? "Customizing..." : "Switch to Custom Pricing"}
               </Button>
@@ -350,254 +432,379 @@ const ProductPricingPage = () => {
         </CardContent>
       </Card>
 
-      {/* Pricing Components Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pricing Components</CardTitle>
-          <CardDescription>
-            {isCustomDynamic
-              ? "Edit pricing components below. Changes are saved when you click Save."
-              : "These values are inherited from the subcategory. Switch to custom pricing to edit."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Component</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Value</TableHead>
-                <TableHead>Calculated</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {liveBreakdown.components.map((component: any) => (
-                <TableRow key={component.componentKey}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{component.componentName}</p>
-                      <p className="text-xs text-muted-foreground">{component.componentKey}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {component.componentKey === "metal_cost" ? (
-                      <Select
-                        value={component.metalPriceMode || "AUTO"}
-                        onValueChange={(value) =>
-                          handleComponentChange(component.componentKey, "metalPriceMode", value)
-                        }
-                        disabled={!isCustomDynamic}
-                      >
-                        <SelectTrigger className="w-28">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="AUTO">Auto</SelectItem>
-                          <SelectItem value="MANUAL">Manual</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <Select
-                          value={component.calculationType}
-                          onValueChange={(value) =>
-                            handleComponentChange(component.componentKey, "calculationType", value)
-                          }
-                          disabled={!isCustomDynamic}
-                        >
-                          <SelectTrigger className="w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {calculationTypes.map((type: any) => (
-                              <SelectItem key={type.value} value={type.value}>
-                                {type.key}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {component.calculationType === "PERCENTAGE" && (
+      {/* Static Price Info */}
+      {isStaticPrice && (
+        <Alert>
+          <DollarSign className="h-4 w-4" />
+          <AlertTitle>Fixed Price Product</AlertTitle>
+          <AlertDescription>
+            This product has a fixed price of{" "}
+            <span className="font-semibold">
+              ₹{product.staticPrice?.toLocaleString("en-IN") || "0"}
+            </span>
+            . To change the price, edit the product and update the static price field.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Pricing Components Table — hidden for STATIC_PRICE */}
+      {!isStaticPrice && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pricing Components</CardTitle>
+            <CardDescription>
+              {isCustomDynamic
+                ? "Edit pricing components below. Changes are saved when you click Save."
+                : "These values are inherited from the subcategory. Switch to custom pricing to edit."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Component</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Value</TableHead>
+                  <TableHead>Calculated</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {liveBreakdown.components.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      No pricing components found. The subcategory may not have a pricing
+                      configuration yet.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  liveBreakdown.components.map((component: any) => (
+                    <TableRow key={component.componentKey}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{component.componentName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {component.componentKey}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {component.componentKey === "metal_cost" ? (
                           <Select
-                            value={component.percentageOf || "metalCost"}
+                            value={component.metalPriceMode || "AUTO"}
                             onValueChange={(value) =>
-                              handleComponentChange(component.componentKey, "percentageOf", value)
+                              handleComponentChange(
+                                component.componentKey,
+                                "metalPriceMode",
+                                value
+                              )
                             }
                             disabled={!isCustomDynamic}
                           >
-                            <SelectTrigger className="w-24">
+                            <SelectTrigger className="w-28">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="metalCost">Metal</SelectItem>
-                              <SelectItem value="subtotal">Subtotal</SelectItem>
+                              <SelectItem value="AUTO">Auto</SelectItem>
+                              <SelectItem value="MANUAL">Manual</SelectItem>
                             </SelectContent>
                           </Select>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <Select
+                              value={component.calculationType}
+                              onValueChange={(value) =>
+                                handleComponentChange(
+                                  component.componentKey,
+                                  "calculationType",
+                                  value
+                                )
+                              }
+                              disabled={!isCustomDynamic}
+                            >
+                              <SelectTrigger className="w-24">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {calculationTypes.map((type: any) => (
+                                  <SelectItem key={type.value} value={type.value}>
+                                    {type.key}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {component.calculationType === "PERCENTAGE" && (
+                              <Select
+                                value={component.percentageOf || "metalCost"}
+                                onValueChange={(value) =>
+                                  handleComponentChange(
+                                    component.componentKey,
+                                    "percentageOf",
+                                    value
+                                  )
+                                }
+                                disabled={!isCustomDynamic}
+                              >
+                                <SelectTrigger className="w-24">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="metalCost">Metal</SelectItem>
+                                  <SelectItem value="subtotal">Subtotal</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
                         )}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {component.componentKey === "metal_cost" && component.metalPriceMode === "MANUAL" ? (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={component.manualMetalPrice || ""}
-                          onChange={(e) =>
-                            handleComponentChange(
-                              component.componentKey,
-                              "manualMetalPrice",
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
-                          className="w-20"
-                          disabled={!isCustomDynamic}
-                        />
-                        <span className="text-xs">/g</span>
-                      </div>
-                    ) : component.componentKey === "metal_cost" ? (
-                      <span className="text-sm text-muted-foreground">System</span>
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={component.value || 0}
-                          onChange={(e) =>
-                            handleComponentChange(
-                              component.componentKey,
-                              "value",
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
-                          className="w-16"
-                          disabled={!isCustomDynamic}
-                        />
-                        <span className="text-xs">
-                          {component.calculationType === "PERCENTAGE" ? "%" : component.calculationType === "FIXED" ? "₹" : ""}
+                      </TableCell>
+                      <TableCell>
+                        {component.componentKey === "metal_cost" &&
+                        component.metalPriceMode === "MANUAL" ? (
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={component.manualMetalPrice || ""}
+                              onChange={(e) =>
+                                handleComponentChange(
+                                  component.componentKey,
+                                  "manualMetalPrice",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="w-20"
+                              disabled={!isCustomDynamic}
+                            />
+                            <span className="text-xs">/g</span>
+                          </div>
+                        ) : component.componentKey === "metal_cost" ? (
+                          <span className="text-sm text-muted-foreground">System</span>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={component.value || 0}
+                              onChange={(e) =>
+                                handleComponentChange(
+                                  component.componentKey,
+                                  "value",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="w-16"
+                              disabled={!isCustomDynamic || component.isFrozen}
+                            />
+                            <span className="text-xs">
+                              {component.calculationType === "PERCENTAGE"
+                                ? "%"
+                                : component.calculationType === "FIXED"
+                                ? "₹"
+                                : ""}
+                            </span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono">
+                          ₹{component.calculatedValue?.toFixed(2) || "0.00"}
+                        </span>
+                        {component.isFrozen && (
+                          <p className="text-xs text-muted-foreground">frozen</p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {component.isFrozen && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Lock className="h-3 w-3 mr-1" /> Frozen
+                            </Badge>
+                          )}
+                          {!component.isVisible && (
+                            <Badge variant="outline" className="text-xs">
+                              <EyeOff className="h-3 w-3 mr-1" /> Hidden
+                            </Badge>
+                          )}
+                          {!component.isFrozen &&
+                            component.isVisible !== false &&
+                            component.isActive !== false && (
+                              <Badge variant="default" className="text-xs">
+                                Active
+                              </Badge>
+                            )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {/* Visibility toggle */}
+                          <Button
+                            size="sm"
+                            variant={component.isVisible !== false ? "outline" : "ghost"}
+                            onClick={() =>
+                              handleComponentChange(
+                                component.componentKey,
+                                "isVisible",
+                                !component.isVisible
+                              )
+                            }
+                            disabled={!isCustomDynamic}
+                            title={component.isVisible !== false ? "Hide from customer" : "Show to customer"}
+                          >
+                            {component.isVisible !== false ? (
+                              <Eye className="h-4 w-4" />
+                            ) : (
+                              <EyeOff className="h-4 w-4" />
+                            )}
+                          </Button>
+                          {/* Freeze / Unfreeze */}
+                          {component.isFrozen ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleUnfreeze(component.componentKey)}
+                              disabled={!isCustomDynamic || isUnfreezing}
+                              title="Unfreeze — resume live calculation"
+                            >
+                              <Unlock className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleFreeze(component.componentKey)}
+                              disabled={!isCustomDynamic || isFreezing}
+                              title="Freeze at current value"
+                            >
+                              <Lock className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {/* Active toggle */}
+                          <Switch
+                            checked={component.isActive !== false}
+                            onCheckedChange={(checked) =>
+                              handleComponentChange(
+                                component.componentKey,
+                                "isActive",
+                                checked
+                              )
+                            }
+                            disabled={!isCustomDynamic}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+
+            {/* Breakdown Preview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div>
+                <h4 className="text-sm font-medium mb-3">Admin View (raw components)</h4>
+                <div className="p-4 bg-muted/30 rounded-lg border space-y-2">
+                  {liveBreakdown.components.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No components</p>
+                  ) : (
+                    liveBreakdown.components.map((component: any) => (
+                      <div
+                        key={component.componentKey}
+                        className="flex justify-between text-sm"
+                      >
+                        <span className="text-muted-foreground">
+                          {component.componentName}
+                        </span>
+                        <span className="font-mono">
+                          ₹{component.calculatedValue?.toFixed(2)}
                         </span>
                       </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-mono">₹{component.calculatedValue?.toFixed(2) || "0.00"}</span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      {component.isFrozen && (
-                        <Badge variant="secondary" className="text-xs">
-                          <Lock className="h-3 w-3 mr-1" /> Frozen
-                        </Badge>
-                      )}
-                      {!component.isVisible && (
-                        <Badge variant="outline" className="text-xs">
-                          <EyeOff className="h-3 w-3 mr-1" /> Hidden
-                        </Badge>
-                      )}
-                      {!component.isFrozen && component.isVisible && component.isActive && (
-                        <Badge variant="default" className="text-xs">Active</Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="sm"
-                        variant={component.isVisible ? "outline" : "ghost"}
-                        onClick={() =>
-                          handleComponentChange(component.componentKey, "isVisible", !component.isVisible)
-                        }
-                        disabled={!isCustomDynamic}
+                    ))
+                  )}
+                  <div className="pt-2 mt-2 border-t flex justify-between font-bold">
+                    <span>Total</span>
+                    <span className="font-mono text-lg">
+                      ₹{liveBreakdown.subtotal.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-medium mb-3">
+                  Customer View (collapsed hidden)
+                </h4>
+                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20 space-y-2">
+                  {customerBreakdown.components.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No components</p>
+                  ) : (
+                    customerBreakdown.components.map((component: any) => (
+                      <div
+                        key={component.componentKey}
+                        className="flex justify-between text-sm"
                       >
-                        {component.isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                      </Button>
-                      <Switch
-                        checked={component.isActive}
-                        onCheckedChange={(checked) =>
-                          handleComponentChange(component.componentKey, "isActive", checked)
+                        <span className="text-muted-foreground">
+                          {component.componentName}
+                        </span>
+                        <span className="font-mono text-primary font-medium">
+                          ₹{component.calculatedValue?.toFixed(2)}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                  <div className="pt-2 mt-2 border-t flex justify-between font-bold">
+                    <span>Total</span>
+                    <span className="font-mono text-lg">
+                      ₹{customerBreakdown.subtotal.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Preview Controls */}
+            <div className="mt-8 p-4 bg-muted rounded-lg border">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-medium">Preview Controls</p>
+                  <div className="flex gap-4 mt-2">
+                    <div>
+                      <Label className="text-xs">Net Weight (g)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={previewNetWeight}
+                        onChange={(e) =>
+                          setPreviewNetWeight(parseFloat(e.target.value) || 0)
                         }
-                        disabled={!isCustomDynamic}
+                        className="w-24 h-8"
                       />
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {/* Breakdown Preview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <div>
-              <h4 className="text-sm font-medium mb-3">Admin View (raw components)</h4>
-              <div className="p-4 bg-muted/30 rounded-lg border space-y-2">
-                {liveBreakdown.components.map((component: any) => (
-                  <div key={component.componentKey} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{component.componentName}</span>
-                    <span className="font-mono">₹{component.calculatedValue?.toFixed(2)}</span>
+                    <div>
+                      <Label className="text-xs">Metal Rate (₹/g)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={previewMetalRate}
+                        onChange={(e) =>
+                          setPreviewMetalRate(parseFloat(e.target.value) || 0)
+                        }
+                        className="w-24 h-8"
+                      />
+                    </div>
                   </div>
-                ))}
-                <div className="pt-2 mt-2 border-t flex justify-between font-bold">
-                  <span>Total</span>
-                  <span className="font-mono text-lg">₹{liveBreakdown.subtotal.toFixed(2)}</span>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Calculated Total</p>
+                  <p className="text-3xl font-bold tracking-tight">
+                    ₹{liveBreakdown.subtotal.toFixed(2)}
+                  </p>
                 </div>
               </div>
             </div>
-
-            <div>
-              <h4 className="text-sm font-medium mb-3">Customer View (collapsed hidden)</h4>
-              <div className="p-4 bg-primary/5 rounded-lg border border-primary/20 space-y-2">
-                {customerBreakdown.components.map((component: any) => (
-                  <div key={component.componentKey} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{component.componentName}</span>
-                    <span className="font-mono text-primary font-medium">₹{component.calculatedValue?.toFixed(2)}</span>
-                  </div>
-                ))}
-                <div className="pt-2 mt-2 border-t flex justify-between font-bold">
-                  <span>Total</span>
-                  <span className="font-mono text-lg">₹{customerBreakdown.subtotal.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Pricing Controls Input */}
-          <div className="mt-8 p-4 bg-muted rounded-lg border">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm font-medium">Preview Controls</p>
-                <div className="flex gap-4 mt-2">
-                  <div>
-                    <Label className="text-xs">Net Weight (g)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={previewNetWeight}
-                      onChange={(e) => setPreviewNetWeight(parseFloat(e.target.value) || 0)}
-                      className="w-24 h-8"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Metal Rate (₹/g)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={previewMetalRate}
-                      onChange={(e) => setPreviewMetalRate(parseFloat(e.target.value) || 0)}
-                      className="w-24 h-8"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Calculated Total</p>
-                <p className="text-3xl font-bold tracking-tight">₹{liveBreakdown.subtotal.toFixed(2)}</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Actions */}
       {isCustomDynamic && (
@@ -609,7 +816,11 @@ const ProductPricingPage = () => {
             </div>
           )}
           <div className="flex gap-2 ml-auto">
-            <Button variant="outline" onClick={() => refetchSummary()} disabled={isLoadingSummary}>
+            <Button
+              variant="outline"
+              onClick={() => refetchSummary()}
+              disabled={isLoadingSummary}
+            >
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
