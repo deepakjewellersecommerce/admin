@@ -8,27 +8,65 @@ interface ProductVariant {
 }
 
 interface Product {
-  brand?: string;
+  _id?: string;
   productTitle: string;
   productSlug: string;
   skuNo: string;
+
+  // Category hierarchy
   categoryId?: { _id: string; name: string; description?: string; displayImage?: string } | string;
-  regularPrice: number;
-  salePrice: number;
-  images?: any[];
+  subcategoryId?: string;
+  materialId?: string;
+  genderId?: string;
+  itemId?: string;
+  categoryHierarchyPath?: string;
+
+  // Metal / weights
+  metalType?: string;
+  grossWeight?: number;
+  netWeight?: number;
+
+  // Pricing (new jewelry system)
+  pricingMode?: "SUBCATEGORY_DYNAMIC" | "CUSTOM_DYNAMIC" | "STATIC_PRICE";
+  staticPrice?: number;
+  calculatedPrice?: number;
+  salePrice?: number;
+  regularPrice?: number;
+
+  // Gemstones
+  gemstones?: Array<{
+    name: string;
+    customName?: string;
+    weight: number;
+    pricePerCarat: number;
+    totalCost?: number;
+  }>;
+
+  // Status
   isActive: boolean;
-  productDescription: string;
-  _id?: string;
-  varients?: ProductVariant[];
-  gst?: number;
-  productImageUrl?: string[];
   isFeatured?: boolean;
+
+  // Content
+  productDescription?: string;
+  careHandling?: string;
+
+  // Images
+  productImageUrl?: string[];
+  images?: any[];
+
+  // SEO
+  seoTitle?: string;
+  seoDescription?: string;
+
+  // GST (legacy / static products)
+  gst?: number;
+
+  // Legacy fields (kept for backwards-compat with old product records)
+  brand?: string;
+  varients?: ProductVariant[];
   ingredients?: string;
   benefits?: string;
-  shlok?: {
-    shlokText?: string;
-    shlokMeaning?: string;
-  };
+  shlok?: { shlokText?: string; shlokMeaning?: string };
   amazonLink?: string;
 }
 

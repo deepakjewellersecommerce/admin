@@ -2,7 +2,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import Product from "./product";
 import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
-import { Pencil, Trash2, DollarSign } from "lucide-react";
+import { Pencil, Trash2, DollarSign, Eye } from "lucide-react";
 import AlertConfirm from "../ui/alert-confirm";
 import { useDeleteProduct } from "@/lib/react-query/product-query";
 import { Badge } from "../ui/badge";
@@ -60,17 +60,22 @@ export const ProductColumns: ColumnDef<Product>[] = [
     accessorKey: "regularPrice",
     header: "Price",
     cell: ({ row }) => {
-      const regular = row.original.regularPrice;
-      const sale = row.original.salePrice;
-      const hasDiscount = sale && sale < regular;
+      const p = row.original;
+      // Use calculatedPrice for dynamic products, fall back to regularPrice or staticPrice
+      const displayPrice = p.calculatedPrice || p.regularPrice || p.staticPrice;
+      const sale = p.salePrice;
+      const hasDiscount = sale != null && displayPrice != null && sale < displayPrice;
+      if (displayPrice == null) {
+        return <span className="text-xs text-muted-foreground">—</span>;
+      }
       return (
         <div className="text-right tabular-nums">
           <div className="text-sm font-medium">
-            {formatINR(hasDiscount ? sale : regular)}
+            {formatINR(hasDiscount ? sale! : displayPrice)}
           </div>
           {hasDiscount && (
             <div className="text-xs text-muted-foreground line-through">
-              {formatINR(regular)}
+              {formatINR(displayPrice)}
             </div>
           )}
         </div>
@@ -82,7 +87,7 @@ export const ProductColumns: ColumnDef<Product>[] = [
     header: "GST",
     cell: ({ row }) => (
       <span className="text-sm text-muted-foreground tabular-nums">
-        {row.original.gst}%
+        {row.original.gst != null ? `${row.original.gst}%` : "—"}
       </span>
     ),
   },
@@ -133,6 +138,16 @@ function ActionButtons({ id }: { id?: string }) {
 
   return (
     <div className="flex items-center justify-end gap-1">
+      <Link to={`/dashboard/products/view/${id}`}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          title="View Variants & RFID"
+        >
+          <Eye size={15} />
+        </Button>
+      </Link>
       <Button
         variant="ghost"
         size="icon"

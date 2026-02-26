@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import LoadingScreen from "../common/loading-screen";
 import DataTable from "../table/data-table-server";
@@ -20,6 +20,8 @@ type TableFilter = {
   pageIndex: number;
   pageSize: number;
   search: string;
+  categoryId?: string;
+  subcategoryId?: string;
 };
 
 const formatNumber = (n: number) => new Intl.NumberFormat('en-IN').format(n);
@@ -27,10 +29,9 @@ const formatNumber = (n: number) => new Intl.NumberFormat('en-IN').format(n);
 const ProductList = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState<string>("");
-  const searchInput = useRef<HTMLInputElement>();
   const [products, setproducts] = useState<Product[]>([]);
   const [filter, setFilter] = useState<TableFilter>({
-    pageIndex: 2,
+    pageIndex: 0,   // Fix 1: was 2 — first render should be page 1
     pageSize: 10,
     date: "",
     search: "",
@@ -52,12 +53,11 @@ const ProductList = () => {
     ...(selectedGenderId ? { genderId: selectedGenderId } : {}),
     ...(selectedItemId ? { itemId: selectedItemId } : {}),
   });
-  const { data: subcategoriesRaw } = useGetAllSubcategories({
-    ...(selectedCategoryId ? { categoryId: selectedCategoryId } : {}),
-  });
+  const { data: subcategoriesRaw } = useGetAllSubcategories(
+    selectedCategoryId ? { categoryId: selectedCategoryId } : {}
+  );
 
   // Extract arrays from API responses
-  // API shape: { status, data: { materials: [...] } } — hooks return the outer object
   const materials = useMemo(() => {
     const d = materialsRaw?.data?.materials ?? materialsRaw?.materials;
     return Array.isArray(d) ? d : [];
@@ -91,7 +91,6 @@ const ProductList = () => {
     if (selectedItemId) params.itemId = selectedItemId;
     if (selectedCategoryId) params.categoryId = selectedCategoryId;
 
-    // Group by the next level after the deepest selection
     if (selectedCategoryId) params.groupBy = "category";
     else if (selectedItemId) params.groupBy = "category";
     else if (selectedGenderId) params.groupBy = "item";
@@ -108,10 +107,10 @@ const ProductList = () => {
   const stockTurnover = Array.isArray(stockTurnoverRaw?.data ?? stockTurnoverRaw) ? (stockTurnoverRaw?.data ?? stockTurnoverRaw) : [];
 
   const changePage = ({ pageIndex }: { pageIndex: number }) => {
-    setFilter((prev) => ({ ...prev, pageIndex: pageIndex }));
+    setFilter((prev) => ({ ...prev, pageIndex }));
   };
 
-  const { isLoading, data, isSuccess } = useGetProducts(filter);
+  const { isLoading, data, isSuccess, isError } = useGetProducts(filter);  // Fix 6: added isError
 
   useEffect(() => {
     if (isSuccess) {
@@ -120,29 +119,44 @@ const ProductList = () => {
     }
   }, [isSuccess, data]);
 
+  // Sync search changes to filter (resets to page 0)
   useEffect(() => {
-    if (searchInput.current) searchInput.current.focus();
-  });
-  useEffect(() => {
-    setFilter({ search, pageIndex: 0, pageSize: 10, date: "" });
+    setFilter(prev => ({ ...prev, search, pageIndex: 0 }));
   }, [search]);
 
-  // Reset child selections when parent changes
+  // Fix 2: Sync hierarchy selections to the products table filter
+  useEffect(() => {
+    setFilter(prev => ({
+      ...prev,
+      pageIndex: 0,
+      subcategoryId: selectedSubcategoryId || undefined,
+      categoryId: !selectedSubcategoryId && selectedCategoryId ? selectedCategoryId : undefined,
+    }));
+  }, [selectedSubcategoryId, selectedCategoryId]);
+
+  // Fix 3: handleMaterialChange — reset ALL child selections
   const handleMaterialChange = (id: string) => {
     setSelectedMaterialId(id);
+    setSelectedGenderId("");      // Fix 3
+    setSelectedItemId("");        // Fix 3
     setSelectedCategoryId("");
     setSelectedSubcategoryId("");
   };
+
+  // Fix 4: handleGenderChange — reset item and below
   const handleGenderChange = (id: string) => {
     setSelectedGenderId(id);
+    setSelectedItemId("");        // Fix 4
     setSelectedCategoryId("");
     setSelectedSubcategoryId("");
   };
+
   const handleItemChange = (id: string) => {
     setSelectedItemId(id);
     setSelectedCategoryId("");
     setSelectedSubcategoryId("");
   };
+
   const handleCategoryChange = (id: string) => {
     setSelectedCategoryId(id);
     setSelectedSubcategoryId("");
@@ -426,6 +440,13 @@ const ProductList = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          {/* Fix 6: show error state */}
+          {isError && (
+            <p className="py-8 text-center text-sm text-destructive">
+              Failed to load products. Please refresh the page.
+            </p>
+          )}
+          {isLoading && <LoadingScreen />}
           {isSuccess && (
             <DataTable
               columns={ProductColumns}
@@ -435,7 +456,6 @@ const ProductList = () => {
               changePage={changePage}
             />
           )}
-          {isLoading && <LoadingScreen />}
         </CardContent>
       </Card>
     </section>
