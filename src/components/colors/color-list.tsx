@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import LoadingScreen from "../common/loading-screen";
 import DataTable from "../table/data-table-server";
 import { Input } from "../ui/input";
 import { ProductColor } from "./color";
 import { useGetColor } from "@/lib/react-query/color-query";
 import { ProductColorColumns } from "./columns";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Plus, Search } from "lucide-react";
 
 type TableFilter = {
   date: string;
@@ -12,6 +17,7 @@ type TableFilter = {
   pageSize: number;
   search: string;
 };
+
 const ColorList = () => {
   const [search, setSearch] = useState<string>("");
   const searchInput = useRef<HTMLInputElement>();
@@ -45,29 +51,55 @@ const ColorList = () => {
   }, [search]);
 
   return (
-    <section className="">
-      <h2 className="mb-2 text-3xl tracking-wide">Color List</h2>
-      <div className="mt-4 rounded-lg border bg-white px-4 py-6">
-        <header className="mb-5  ml-2 flex items-center">
-          <span className="mr-3 h-8 w-5 rounded-md bg-violet-300"></span>
-          <Input
-            value={search}
-            placeholder="Search Color here"
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-96 placeholder:text-base"
-          />
-        </header>
-        {isSuccess && (
-          <DataTable
-            columns={ProductColorColumns}
-            data={colors}
-            page={filter.pageIndex}
-            totalPage={Math.ceil(data.data.data?.total / data.data.data?.limit)}
-            changePage={changePage}
-          />
-        )}
-        {isLoading && <LoadingScreen />}
+    <section className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Colors</h2>
+          <p className="text-sm text-gray-500">
+            Manage colors for product variants
+          </p>
+        </div>
+        <Link to="/dashboard/colors/add">
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Color
+          </Button>
+        </Link>
       </div>
+
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-lg">All Colors</CardTitle>
+              {isSuccess && (
+                <Badge variant="secondary">{colors.length} total</Badge>
+              )}
+            </div>
+            <div className="relative w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                value={search}
+                placeholder="Search colors..."
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isSuccess && (
+            <DataTable
+              columns={ProductColorColumns}
+              data={colors}
+              page={filter.pageIndex}
+              totalPage={Math.ceil(data.data.data?.total / data.data.data?.limit)}
+              changePage={changePage}
+            />
+          )}
+          {isLoading && <LoadingScreen />}
+        </CardContent>
+      </Card>
     </section>
   );
 };

@@ -12,14 +12,19 @@ interface Props {
 }
 
 export default function FormImageInput({ name, helperText, label }: Props) {
-  const url = useFormContext().watch(name);
+  const raw = useFormContext().watch(name);
   const fileInput = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState(url);
+  const [preview, setPreview] = useState<string>("");
   const { control, setValue, getValues } = useFormContext();
 
   useEffect(() => {
-    setPreview(url);
-  }, [url]);
+    // Handle both array and string values for preview
+    if (Array.isArray(raw)) {
+      setPreview(raw.length > 0 ? raw[raw.length - 1] : "");
+    } else {
+      setPreview(raw || "");
+    }
+  }, [raw]);
   // On file select, store the File object in form state under 'images' and show preview
   const onUpload = () => {
     if (!fileInput.current) return;
@@ -31,9 +36,15 @@ export default function FormImageInput({ name, helperText, label }: Props) {
     // Create preview URL
     const reader = new FileReader();
     reader.onload = () => {
-      setPreview(String(reader.result || ''));
-      // Set productImageUrl to preview (optional) and store file in images field
-      setValue(name, String(reader.result || ''));
+      const dataUrl = String(reader.result || '');
+      setPreview(dataUrl);
+      // Update the form field — keep as array if the current value is an array
+      const current = getValues(name);
+      if (Array.isArray(current)) {
+        setValue(name, [...current, dataUrl]);
+      } else {
+        setValue(name, dataUrl);
+      }
       // Store file list under images key so product form can append files to FormData
       const existing = getValues('images') || [];
       setValue('images', [...existing, file]);

@@ -19,6 +19,7 @@ import {
   PackageSearch,
   UsersRound,
   GalleryVertical,
+  Palette,
   Rocket,
 } from "lucide-react";
 import { useState } from "react";
@@ -56,6 +57,7 @@ const standaloneItems: NavItem[] = [
   { label: "Orders", icon: ShoppingCart, href: "/orders/list" },
   { label: "Products", icon: Box, href: "/products/list" },
   { label: "Categories", icon: Layers, href: "/catalog/categories" },
+  { label: "Colors", icon: Palette, href: "/colors/list" },
   { label: "Banners", icon: GalleryVertical, href: "/banners/list" },
   { label: "Coupons", icon: TicketIcon, href: "/coupons/list" },
   { label: "Metal Pricing", icon: Coins, href: "/pricing/metals" },
