@@ -1,4 +1,4 @@
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "../ui/button";
@@ -6,7 +6,6 @@ import FormImageInput from "../form/FormImage";
 import FormInput from "../form/FormInput";
 import FormTextArea from "../form/FormTextArea";
 import { useAddProduct } from "@/lib/react-query/product-query";
-import { useGetPricePreview } from "@/lib/react-query/product-pricing-query";
 import FormProvider from "../form/FormProvider";
 import { useMemo, useEffect, useState } from "react";
 import FormSwitch from "../form/form-switch";
@@ -27,7 +26,7 @@ import type { SubcategoryFlat } from "@/lib/axios/category-hierarchy-API";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
-import { AlertCircle, Plus, Trash2, Calculator, Info } from "lucide-react";
+import { AlertCircle, Calculator, Info } from "lucide-react";
 import { Alert, AlertDescription } from "../ui/alert";
 import {
   Select,
@@ -39,40 +38,12 @@ import {
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 
-// Gemstone types
-const GEMSTONE_TYPES = [
-  "Diamond",
-  "Ruby",
-  "Emerald",
-  "Sapphire",
-  "Pearl",
-  "Topaz",
-  "Amethyst",
-  "Garnet",
-  "Opal",
-  "Turquoise",
-  "Aquamarine",
-  "Peridot",
-  "Citrine",
-  "Tanzanite",
-  "Custom",
-] as const;
-
-// Gemstone schema
-const gemstoneSchema = z.object({
-  name: z.enum(GEMSTONE_TYPES),
-  customName: z.string().optional(),
-  weight: z.number().min(0.001, "Weight must be at least 0.001 carats"),
-  pricePerCarat: z.number().min(0, "Price cannot be negative"),
-});
-
 // Validation schema
 const productSchema = z.object({
   productTitle: z.string().min(3, "Product title must be at least 3 characters"),
   productSlug: z.string().min(1, "Product slug is required"),
   skuNo: z.string().min(1, "SKU is required"),
   boxNumber: z.number().int().min(1, "Box number is required"),
-  quantity: z.number().int().min(1, "Quantity must be at least 1"),
   productDescription: z.string().min(10, "Product description is required and must be at least 10 characters"),
   careHandling: z.string().optional(),
 
@@ -87,12 +58,12 @@ const productSchema = z.object({
   grossWeight: z.number().min(0.001, "Gross weight must be positive"),
   netWeight: z.number().min(0.001, "Net weight must be positive"),
 
-  // Gemstones
-  gemstones: z.array(gemstoneSchema).max(50, "Maximum 50 gemstones allowed").optional(),
-
   // Pricing Mode
   pricingMode: z.enum(["SUBCATEGORY_DYNAMIC", "STATIC_PRICE"]),
-  staticPrice: z.number().optional(),
+  staticPrice: z.preprocess(
+    (val) => (val === "" || (typeof val === "number" && isNaN(val as number)) ? undefined : val),
+    z.number().min(0, "Static price cannot be negative").optional()
+  ),
 
   // Other fields
   isActive: z.boolean().optional(),
@@ -121,7 +92,6 @@ const defaultValues: ProductFormData = {
   productSlug: "",
   skuNo: "",
   boxNumber: 1,
-  quantity: 1,
   productDescription: "",
   careHandling: "",
   materialId: "",
@@ -131,7 +101,6 @@ const defaultValues: ProductFormData = {
   subcategoryId: "",
   grossWeight: 0,
   netWeight: 0,
-  gemstones: [],
   pricingMode: "SUBCATEGORY_DYNAMIC",
   staticPrice: undefined,
   isActive: true,
@@ -195,11 +164,6 @@ const ProductFormV2 = () => {
     defaultValues,
   });
 
-  const { fields: gemstoneFields, append: addGemstone, remove: removeGemstone } = useFieldArray({
-    control: form.control,
-    name: "gemstones",
-  });
-
   // Watch form values
   const subcategoryId = form.watch("subcategoryId");
   const boxNumber = form.watch("boxNumber");
@@ -256,7 +220,6 @@ const ProductFormV2 = () => {
   const { data: metalPricesData } = useGetAllMetalPrices();
 
   const { mutate: addProduct, isPending } = useAddProduct();
-  const { isPending: isPreviewLoading } = useGetPricePreview();
 
   // Get selected subcategory details for display and auto-populating hierarchy
   const selectedSubcategory = useMemo((): any | null => {
@@ -406,18 +369,6 @@ const ProductFormV2 = () => {
     }
   }, [grossWeight, netWeight]);
 
-  // Calculate price preview
-  const handlePreviewPrice = () => {
-    if (!subcategoryId || !grossWeight || !netWeight) {
-      toast.error("Please fill in subcategory and weights first");
-      return;
-    }
-
-    // For new products, we'll simulate a preview
-    // In reality, you'd call the API with a temporary product ID or use a preview endpoint
-    toast.info("Price preview will be available after product creation");
-  };
-
   const onSubmit = async (data: ProductFormData) => {
     console.log("=== FORM SUBMISSION STARTED ===");
     console.log("Form data:", data);
@@ -433,7 +384,6 @@ const ProductFormV2 = () => {
         productSlug: data.productSlug,
         skuNo: data.skuNo,
         boxNumber: data.boxNumber,
-        quantity: data.quantity,
         productDescription: data.productDescription || "",
         careHandling: data.careHandling || "",
         subcategoryId: data.subcategoryId,
@@ -499,10 +449,8 @@ const ProductFormV2 = () => {
       console.log("Data to send:", transformedData);
 
       addProduct(transformedData, {
-        onSuccess: (response) => {
-          console.log("=== SUCCESS ===");
-          console.log("Product created successfully:", response);
-          toast.success("Product added successfully!");
+        onSuccess: () => {
+          // Toast is already shown by useAddProduct's onSuccess handler in product-query.tsx
           setTimeout(() => {
             navigate("/dashboard/products/list");
           }, 1500);
@@ -533,7 +481,6 @@ const ProductFormV2 = () => {
                 productDescription: "Product description is required (10+ characters).",
                 category: "Please select a valid category.",
                 boxNumber: "Box number must be a positive number.",
-                quantity: "Quantity must be a positive number.",
               };
 
               // Build error message from fields
@@ -801,19 +748,6 @@ const ProductFormV2 = () => {
                     label="SKU Number (Manual Override)"
                     placeholder="G22FNGBOX11"
                   />
-                  <div>
-                    <Label htmlFor="quantity">Quantity *</Label>
-                    <Input
-                      id="quantity"
-                      type="number"
-                      min="1"
-                      {...form.register("quantity", { valueAsNumber: true })}
-                      placeholder="1"
-                    />
-                    {form.formState.errors.quantity && (
-                      <p className="text-sm text-red-500 mt-1">{form.formState.errors.quantity.message}</p>
-                    )}
-                  </div>
                 </div>
 
                 <FormTextArea
@@ -874,83 +808,6 @@ const ProductFormV2 = () => {
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>{weightWarning}</AlertDescription>
                   </Alert>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Gemstones Section */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">Gemstones</CardTitle>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addGemstone({ name: "Diamond", weight: 0.5, pricePerCarat: 0 })}
-                  disabled={gemstoneFields.length >= 50}
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Add Gemstone
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {gemstoneFields.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-4">No gemstones added</p>
-                ) : (
-                  <div className="space-y-4">
-                    {gemstoneFields.map((field, index) => (
-                      <div key={field.id} className="flex items-end gap-3 p-3 border rounded-md">
-                        <div className="flex-1">
-                          <Label>Type</Label>
-                          <Select
-                            value={form.watch(`gemstones.${index}.name`)}
-                            onValueChange={(val) => form.setValue(`gemstones.${index}.name`, val as any)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {GEMSTONE_TYPES.map((type) => (
-                                <SelectItem key={type} value={type}>{type}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        {form.watch(`gemstones.${index}.name`) === "Custom" && (
-                          <div className="flex-1">
-                            <Label>Custom Name</Label>
-                            <Input
-                              {...form.register(`gemstones.${index}.customName`)}
-                              placeholder="Custom gemstone name"
-                            />
-                          </div>
-                        )}
-                        <div className="w-24">
-                          <Label>Weight (ct)</Label>
-                          <Input
-                            type="number"
-                            step="0.001"
-                            {...form.register(`gemstones.${index}.weight`, { valueAsNumber: true })}
-                          />
-                        </div>
-                        <div className="w-32">
-                          <Label>Price/Carat (₹)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            {...form.register(`gemstones.${index}.pricePerCarat`, { valueAsNumber: true })}
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeGemstone(index)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
                 )}
               </CardContent>
             </Card>
@@ -1062,16 +919,12 @@ const ProductFormV2 = () => {
                   </div>
                 )}
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={handlePreviewPrice}
-                  disabled={!subcategoryId || !grossWeight || !netWeight}
-                >
-                  <Calculator className="h-4 w-4 mr-2" />
-                  Preview Price
-                </Button>
+                {subcategoryId && grossWeight > 0 && netWeight > 0 && pricingMode === "SUBCATEGORY_DYNAMIC" && (
+                  <p className="text-xs text-blue-600 flex items-start gap-1">
+                    <Calculator className="h-3 w-3 mt-0.5 shrink-0" />
+                    Price will be auto-calculated from subcategory pricing config and live metal rates immediately after saving.
+                  </p>
+                )}
 
                 <div className="pt-4 border-t">
                   <Button
