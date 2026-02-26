@@ -3,12 +3,13 @@ import instance from './instance';
 // Product API service object
 export const productAPI = {
   getProducts: async (filter:any) => {
-    return instance.get('/product/all',{
+    return instance.get('/product/all', {
       params: {
-        page:filter.pageIndex+1,
-        search:filter.search,
-        // Add filter for jewelry categories if needed
-        category: filter.category,
+        page: filter.pageIndex + 1,
+        search: filter.search || undefined,
+        // Use subcategoryId when available (deepest filter), else categoryId
+        subcategoryId: filter.subcategoryId || undefined,
+        categoryId: !filter.subcategoryId && filter.categoryId ? filter.categoryId : undefined,
       }
     });
   },
@@ -41,11 +42,54 @@ export const productAPI = {
   getProductVariants: async (id:string) => {
     return instance.get(`/product-variant/${id}/all`);
   },
-  addProductVariant: async (payload:unknown) => {
-    return instance.post('/product-variant/add', payload);
+  addProductVariant: async (payload:any) => {
+    const formData = new FormData();
+    formData.append('productId', payload.productId);
+    formData.append('size', payload.size);
+    formData.append('price', String(payload.price));
+    formData.append('salePrice', String(payload.salePrice ?? 0));
+    formData.append('stock', String(payload.stock));
+    if (payload.color) formData.append('color', payload.color);
+    if (payload.weight != null) formData.append('weight', String(payload.weight));
+    if (payload.isActive !== undefined) formData.append('isActive', String(payload.isActive));
+    if (payload.gemstones && payload.gemstones.length > 0) {
+      formData.append('gemstones', JSON.stringify(payload.gemstones));
+    }
+    if (payload.images && payload.images.length > 0) {
+      for (const file of payload.images) {
+        formData.append('images', file);
+      }
+    }
+    return instance.post('/product-variant/add', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
   },
   updateProductVariant: async (payload:any) => {
-    return instance.put(`/product-variant/update/${payload?._id??""}`, payload);
+    const formData = new FormData();
+    formData.append('productId', payload.productId);
+    formData.append('size', payload.size);
+    formData.append('price', String(payload.price));
+    formData.append('salePrice', String(payload.salePrice ?? 0));
+    formData.append('stock', String(payload.stock));
+    if (payload.color) formData.append('color', payload.color);
+    if (payload.weight != null) formData.append('weight', String(payload.weight));
+    if (payload.isActive !== undefined) formData.append('isActive', String(payload.isActive));
+    if (payload.gemstones) {
+      formData.append('gemstones', JSON.stringify(payload.gemstones));
+    }
+    // Keep existing Cloudinary URLs (filter out base64 previews)
+    const existingUrls = (payload.imageUrls || []).filter((url: string) => !url.startsWith('data:'));
+    if (existingUrls.length > 0) {
+      formData.append('imageUrls', JSON.stringify(existingUrls));
+    }
+    if (payload.images && payload.images.length > 0) {
+      for (const file of payload.images) {
+        formData.append('images', file);
+      }
+    }
+    return instance.put(`/product-variant/update/${payload?._id??""}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
   },
   deleteProductVariant: async (id:string) => {
     return instance.delete(`/product-variant/delete/${id}`);
@@ -56,42 +100,13 @@ export const productAPI = {
   addVariantBulk: async (payload:unknown) => {
     return instance.post('/admin/product/bulk/variant', payload);
   },
-  addProduct: async (payload:unknown) => {
-    try {
-      console.log("Attempting to add product with payload:", payload instanceof FormData ? "<FormData>" : JSON.stringify(payload, null, 2));
-
-      // If payload is FormData (files included), send directly to admin endpoint
-      if (payload instanceof FormData) {
-        const response = await instance.post('/admin/product/add', payload, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        return response;
-      }
-
-      // For admin UI, use admin endpoint first for JSON payloads
-      try {
-        const adminResponse = await instance.post('/admin/product/add', payload);
-        console.log("Product added successfully via admin endpoint:", adminResponse);
-        return adminResponse;
-      } catch (adminError: any) {
-        console.log("Admin endpoint failed:", adminError.message);
-        // If admin endpoint fails with 404, fallback to public endpoint
-        if (adminError.response && adminError.response.status !== 404) {
-          throw adminError;
-        }
-        try {
-          const response = await instance.post('/product', payload);
-          console.log("Product added successfully via /product:", response);
-          return response;
-        } catch (productError: any) {
-          console.error("Public product endpoint failed:", productError.message);
-          throw productError;
-        }
-      }
-    } catch (error: any) {
-      console.error("Product add failed completely:", error);
-      throw error;
+  addProduct: async (payload: unknown) => {
+    if (payload instanceof FormData) {
+      return instance.post('/admin/product/add', payload, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
     }
+    return instance.post('/admin/product/add', payload);
   },
   addCategory: async (payload:unknown) => {
     return instance.post(`/product/category/add`, payload);

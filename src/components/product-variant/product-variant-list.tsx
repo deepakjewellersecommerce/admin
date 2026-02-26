@@ -10,11 +10,11 @@ import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
 import CustomSelect from "../ui/custom-select";
+import RfidTagSection from "../products/rfid-tag-section";
 
 const ProductVariantList = () => {
   const [filter, setFilter] = useState({
     size: "",
-    color: "",
     search: "",
   });
 
@@ -34,12 +34,6 @@ const ProductVariantList = () => {
         if (filter.size !== "all")
           filteredVariants = filteredVariants.filter(
             (variant) => variant.size === filter.size
-          );
-      }
-      if (filter.color) {
-        if (filter.color !== "all")
-          filteredVariants = filteredVariants.filter(
-            (variant) => variant.color.slug === filter.color
           );
       }
       return filteredVariants;
@@ -64,25 +58,6 @@ const ProductVariantList = () => {
     return [allSizeOption, ...sizeOptions];
   }, [data]);
 
-  const colorOptions = useMemo(() => {
-    const colors = new Set<string>();
-    if (!data) return [];
-    Array.from(data.data.data.variants).forEach((variant: any) => {
-      colors.add(variant.color?.slug);
-    });
-
-    const coloroptions = Array.from(colors).map((color: any) => ({
-      label: color,
-      value: color,
-    }));
-
-    const allColorOption = {
-      label: "All",
-      value: "all",
-    };
-    return [allColorOption, ...coloroptions];
-  }, [data]);
-
   return (
     <section className="">
       <h2 className="mb-2 text-3xl tracking-wide">ProductVariant List</h2>
@@ -102,14 +77,6 @@ const ProductVariantList = () => {
             onValueChange={(e) => setFilter({ ...filter, size: e })}
             className="w-40 ml-4"
           />
-          <CustomSelect
-            options={colorOptions}
-            placeholder="Filter by Color"
-            onValueChange={(e) => setFilter({ ...filter, color: e })}
-            value={filter.color}
-            className="w-40 ml-4"
-          />
-
           <Link className="ml-auto" to={`/dashboard/product-variant/${id}/add`}>
             <Button size={"sm"} color={"violet"}>
               <Plus size={16} className="mr-2" />
@@ -122,6 +89,9 @@ const ProductVariantList = () => {
         )}
         {isLoading && <LoadingScreen />}
       </div>
+
+      {/* RFID Tag Management */}
+      {id && <RfidTagSection productId={String(id)} />}
     </section>
   );
 };

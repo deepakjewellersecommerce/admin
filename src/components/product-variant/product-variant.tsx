@@ -5,9 +5,10 @@ interface ProductVariant {
   price: number;
   salePrice?: number | null;
   stock: number;
-  color?: string | any;
   isActive?: boolean;
   imageUrls: string[];
+  color?: { _id: string; color_name: string; hexcode: string } | string;
+  weight?: number;
 }
 
 export default ProductVariant;

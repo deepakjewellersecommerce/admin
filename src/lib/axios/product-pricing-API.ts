@@ -59,16 +59,24 @@ export interface ProductPricingSummary {
     grossWeight: number;
     netWeight: number;
     pricingMode: string;
+    staticPrice?: number;
     calculatedPrice: number;
     allComponentsFrozen: boolean;
   };
-  breakdown: PriceBreakdown;
-  subcategoryPricing?: {
-    subcategoryId: string;
-    subcategoryName: string;
-    hasPricingConfig: boolean;
+  pricing: {
+    mode: string;
+    source: string;
+    sourceSubcategory: { id: string; name: string } | null;
+    allComponentsFrozen: boolean;
   };
-  currentMetalRate: number;
+  metalRate: {
+    metalType: string;
+    pricePerGram: number;
+    lastUpdated: string;
+  };
+  pricingConfig: { components: ProductPricingComponent[] } | null;
+  breakdown: PriceBreakdown | null;
+  calculatedPrice: number;
 }
 
 export interface BulkRecalculateResult {

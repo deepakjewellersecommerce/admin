@@ -57,9 +57,11 @@ export const useGetProduct = (id: string) => {
   });
 };
 export const useUploadProducts = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: productAPI.uploadProducts,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
       toast.success("Successfully Uploaded!");
     },
     onError: (error: Error) => {
@@ -203,9 +205,11 @@ export const useUpdateProduct = () => {
 };
 
 export const useAddCategory = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: productAPI.addCategory,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
       toast.success("Successfully Added!");
     },
     onError: (error: any) => {
@@ -233,13 +237,10 @@ export const useAddProductVariant = () => {
       toast.success("Successfully Added!");
       queryClient.invalidateQueries({
         queryKey: ["productVariants"],
-        predicate: (query) => {
-          return query.queryKey[1] === "productVariants";
-        },
       });
     },
     onError: (error: any) => {
-      toast.success(
+      toast.error(
         error.response?.data.message ??
           error.response?.data.error.message ??
           "Error adding product variant"
@@ -249,9 +250,11 @@ export const useAddProductVariant = () => {
 };
 
 export const useAddVariantBulk = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: productAPI.addVariantBulk,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["productVariants"] });
       toast.success("Successfully Added!");
     },
     onError: (error: any) => {
@@ -270,9 +273,6 @@ export const useUpdateProductVariant = () => {
       toast.success("Successfully Updated!");
       queryClient.invalidateQueries({
         queryKey: ["productVariants"],
-        predicate: (query) => {
-          return query.queryKey[1] === "productVariants";
-        },
       });
     },
     onError: (error: any) => {
@@ -293,9 +293,6 @@ export const useDeleteProductVariant = () => {
       toast.success("Successfully Deleted!");
       queryClient.invalidateQueries({
         queryKey: ["productVariants"],
-        predicate: (query) => {
-          return query.queryKey[1] === "productVariants";
-        },
       });
     },
     onError: (error: any) => {
@@ -332,9 +329,12 @@ export const useGetVariant = (id: string | undefined) => {
 };
 
 export const useUpsertProductImages = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: productAPI.upsertProductImages,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["productImages"] });
+      queryClient.invalidateQueries({ queryKey: ["product"] });
       toast.success("Successfully Added!");
     },
     onError: (error: any) => {
