@@ -395,7 +395,6 @@ const ProductFormV2 = () => {
         metalType: selectedSubcategory?.material?.metalType || "",
         grossWeight: data.grossWeight,
         netWeight: data.netWeight,
-        gemstones: data.gemstones || [],
         pricingMode: data.pricingMode,
         staticPrice: data.pricingMode === "STATIC_PRICE" ? data.staticPrice : undefined,
         isActive: data.isActive ?? true,
@@ -425,8 +424,6 @@ const ProductFormV2 = () => {
             if (key === "productImageUrl") {
               console.log("Skipping productImageUrl field (uploading actual files instead)");
               return;
-            } else if (key === "gemstones" && Array.isArray(value)) {
-              formData.append(key, JSON.stringify(value));
             } else if (value !== undefined && value !== null && !Array.isArray(value)) {
               formData.append(key, String(value));
             }

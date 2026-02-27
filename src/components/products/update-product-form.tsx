@@ -262,7 +262,6 @@ const UpdateProductForm = () => {
         careHandling: data.careHandling || "",
         grossWeight: data.grossWeight,
         netWeight: data.netWeight,
-        gemstones: data.gemstones || [],
         pricingMode: data.pricingMode,
         staticPrice: data.pricingMode === "STATIC_PRICE" ? data.staticPrice : undefined,
         salePrice: data.salePrice,
