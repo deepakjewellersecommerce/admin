@@ -238,6 +238,11 @@ export const updateMetalGroupPremium = async (id: string, premium: number) => {
   return response.data;
 };
 
+export const fetchLiveMCXPrices = async () => {
+  const response = await instance.post("/admin/categories/metal-groups/fetch-live-prices");
+  return response.data;
+};
+
 // ==================== MATERIALS ====================
 
 export const getAllMaterials = async (params?: {
@@ -548,6 +553,7 @@ export default {
   getMetalGroup,
   updateMetalGroup,
   updateMetalGroupPremium,
+  fetchLiveMCXPrices,
   // Materials
   getAllMaterials,
   getMaterial,

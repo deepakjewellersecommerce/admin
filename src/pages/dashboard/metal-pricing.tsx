@@ -45,11 +45,13 @@ import {
   Edit,
   Check,
   X,
+  Zap,
 } from "lucide-react";
 import {
   useGetAllMetalPrices,
   useUpdateMetalPrice,
   useBulkFetchMetalPrices,
+  useFetchMetalPrice,
   useGetMetalPriceHistory,
   useGetAffectedProducts,
   useConfirmBulkRecalculation,
@@ -88,6 +90,7 @@ const MetalPricingDashboard = () => {
   // Mutations
   const { mutate: updatePrice, isPending: isUpdating } = useUpdateMetalPrice();
   const { mutate: bulkFetch, isPending: isFetching } = useBulkFetchMetalPrices();
+  const { mutate: fetchLivePrice, isPending: isFetchingLive, variables: fetchingMetalType } = useFetchMetalPrice();
   const { mutate: confirmRecalc, isPending: isRecalculating } = useConfirmBulkRecalculation();
   const { mutate: initializePrices, isPending: isInitializing } = useInitializeMetalPrices();
   const { mutate: bulkRecalculate, isPending: isBulkRecalculating } = useBulkRecalculatePrices();
@@ -315,16 +318,36 @@ const MetalPricingDashboard = () => {
                     </Badge>
                   </div>
                   {!isEditing && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditPrice(price.metalType, price.pricePerGram);
-                      }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="Fetch live price"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fetchLivePrice(price.metalType);
+                        }}
+                        disabled={isFetchingLive && fetchingMetalType === price.metalType}
+                      >
+                        <Zap
+                          className={`h-4 w-4 text-amber-500 ${
+                            isFetchingLive && fetchingMetalType === price.metalType
+                              ? "animate-pulse"
+                              : ""
+                          }`}
+                        />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditPrice(price.metalType, price.pricePerGram);
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               </CardHeader>

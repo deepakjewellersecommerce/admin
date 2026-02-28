@@ -66,6 +66,22 @@ export const useUpdateMetalGroupPremium = () => {
   });
 };
 
+export const useFetchLiveMCXPrices = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => categoryHierarchyAPI.fetchLiveMCXPrices(),
+    onSuccess: (data) => {
+      const count = data?.data?.updated?.length || 0;
+      toast.success(`Live prices fetched! ${count} metal group(s) updated.`);
+      queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "metalGroups"] });
+      queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "materials"] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Failed to fetch live prices");
+    },
+  });
+};
+
 // ==================== MATERIALS ====================
 
 export const useGetAllMaterials = (params?: { includeInactive?: boolean }) => {

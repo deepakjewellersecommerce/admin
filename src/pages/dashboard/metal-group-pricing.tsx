@@ -49,6 +49,7 @@ import {
   useGetAllMetalGroups,
   useUpdateMetalGroupPremium,
   useGetAllMaterials,
+  useFetchLiveMCXPrices,
 } from "@/lib/react-query/category-hierarchy-query";
 
 // Metal group color mapping
@@ -71,6 +72,7 @@ const MetalGroupPricingDashboard = () => {
 
   // Mutations
   const { mutate: updatePremium, isPending: isUpdatingPremium } = useUpdateMetalGroupPremium();
+  const { mutate: fetchLivePrices, isPending: isFetchingLive } = useFetchLiveMCXPrices();
 
   const metalGroups = metalGroupsData?.data?.metalGroups || metalGroupsData?.metalGroups || [];
   const materials = materialsData?.data?.materials || materialsData?.materials || [];
@@ -158,6 +160,14 @@ const MetalGroupPricingDashboard = () => {
             Manage MCX prices and premiums for base metals
           </p>
         </div>
+        <Button
+          variant="outline"
+          onClick={() => fetchLivePrices()}
+          disabled={isFetchingLive}
+        >
+          <RefreshCcw className={`h-4 w-4 mr-2 ${isFetchingLive ? "animate-spin" : ""}`} />
+          {isFetchingLive ? "Fetching..." : "Fetch Live Prices"}
+        </Button>
       </div>
 
       {/* Info Alert */}
