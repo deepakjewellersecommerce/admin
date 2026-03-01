@@ -52,6 +52,14 @@ export const ProductVariantColumns: ColumnDef<ProductVariant>[] = [
     accessorKey: "size",
   },
   {
+    header: "Weight",
+    accessorKey: "weight",
+    cell: ({ row }) => {
+      const weight = row.original.weight;
+      return weight != null ? `${weight}g` : "—";
+    },
+  },
+  {
     header: "Price",
     accessorKey: "price",
     // Add other properties or functions related to this column if needed.
@@ -60,14 +68,6 @@ export const ProductVariantColumns: ColumnDef<ProductVariant>[] = [
     header: "Sale Price",
     accessorKey: "salePrice",
     // Add other properties or functions related to this column if needed.
-  },
-  {
-    header: "Weight",
-    accessorKey: "weight",
-    cell: ({ row }) => {
-      const weight = row.original.weight;
-      return weight != null ? `${weight}g` : "—";
-    },
   },
   {
     accessorKey: "isActive",

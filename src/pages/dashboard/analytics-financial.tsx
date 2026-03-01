@@ -246,13 +246,13 @@ const AnalyticsFinancial = () => {
           Profit & Loss Summary
         </h2>
         {isLoadingFinancial ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
             {Array.from({ length: 7 }).map((_, i) => <MetricSkeleton key={i} />)}
           </div>
         ) : isFinancialError ? (
           <ErrorCard />
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-2"><CardDescription>Gross Revenue<InfoTip text="Total product selling prices (subtotals)" /></CardDescription></CardHeader>
               <CardContent>
