@@ -17,6 +17,11 @@ export const loyaltyAPI = {
     limit?: number;
     sortBy?: string;
     sortOrder?: string;
+    search?: string;
+    tier?: string;
+    minPoints?: string;
+    maxPoints?: string;
+    hasRedeemed?: string;
   }) => {
     return instance.get('/admin/loyalty/users', { params });
   },

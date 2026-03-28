@@ -31,8 +31,8 @@ export const dashboardAnalyticsAPI = {
     instance.get('/admin/dashboard/analytics/revenue-trends', { params }),
   getRepeatPurchaseRate: (params?: { startDate?: string; endDate?: string }) =>
     instance.get('/admin/dashboard/analytics/repeat-purchase-rate', { params }),
-  getStockTurnover: () =>
-    instance.get('/admin/dashboard/analytics/stock-turnover'),
+  getStockTurnover: (params?: { materialId?: string; genderId?: string; itemId?: string; categoryId?: string }) =>
+    instance.get('/admin/dashboard/analytics/stock-turnover', { params }),
   getCategoryDistribution: (params?: { materialId?: string; genderId?: string; itemId?: string; categoryId?: string; groupBy?: string }) =>
     instance.get('/admin/dashboard/analytics/category-distribution', { params }),
   getTaxSummary: (params?: { startDate?: string; endDate?: string }) =>

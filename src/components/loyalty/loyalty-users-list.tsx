@@ -6,21 +6,31 @@ import { Input } from "../ui/input";
 import { LoyaltyUserColumns, LoyaltyUser } from "./loyalty-columns";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Users, Trophy, Coins, TrendingUp } from "lucide-react";
+import CustomSelect from "../ui/custom-select";
 
 type TableFilter = {
   page: number;
   limit: number;
   sortBy: string;
   sortOrder: string;
+  search: string;
+  tier: string;
+  minPoints: string;
+  maxPoints: string;
+  hasRedeemed: string;
 };
 
 const LoyaltyUsersList = () => {
-  const [search, setSearch] = useState<string>("");
   const [filter, setFilter] = useState<TableFilter>({
     page: 1,
     limit: 10,
     sortBy: "totalPoints",
     sortOrder: "desc",
+    search: "",
+    tier: "all",
+    minPoints: "",
+    maxPoints: "",
+    hasRedeemed: "all",
   });
 
   const changePage = ({ pageIndex }: { pageIndex: number }) => {
@@ -32,17 +42,6 @@ const LoyaltyUsersList = () => {
   const loyaltyData: LoyaltyUser[] = data?.data?.data?.loyaltyData || [];
   const overallStats = data?.data?.data?.overallStats || {};
   const pagination = data?.data?.data?.pagination || { totalPages: 1 };
-
-  // Filter by search (client-side for now)
-  const filteredData = loyaltyData.filter((item) => {
-    if (!search) return true;
-    const searchLower = search.toLowerCase();
-    return (
-      item.user?.name?.toLowerCase().includes(searchLower) ||
-      item.user?.email?.toLowerCase().includes(searchLower) ||
-      item.user?.phoneNumber?.includes(search)
-    );
-  });
 
   return (
     <section className="">
@@ -115,20 +114,70 @@ const LoyaltyUsersList = () => {
 
       {/* Users Table */}
       <div className="mt-4 rounded-lg border bg-white px-4 py-6">
-        <header className="mb-5 ml-2 flex items-center">
+        <header className="mb-5 ml-2 flex flex-wrap items-center gap-4">
           <span className="mr-3 h-8 w-5 rounded-md bg-violet-300"></span>
           <Input
-            value={search}
+            value={filter.search}
             placeholder="Search by name, email or phone..."
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) =>
+              setFilter((prev) => ({ ...prev, search: e.target.value, page: 1 }))
+            }
             className="w-96 placeholder:text-base"
+          />
+          <CustomSelect
+            options={[
+              { label: "All Tiers", value: "all" },
+              { label: "Bronze", value: "Bronze" },
+              { label: "Silver", value: "Silver" },
+              { label: "Gold", value: "Gold" },
+              { label: "Platinum", value: "Platinum" },
+            ]}
+            placeholder="Tier"
+            value={filter.tier}
+            onValueChange={(value) =>
+              setFilter((prev) => ({ ...prev, tier: value, page: 1 }))
+            }
+            className="w-40"
+          />
+          <Input
+            type="number"
+            min="0"
+            value={filter.minPoints}
+            onChange={(e) =>
+              setFilter((prev) => ({ ...prev, minPoints: e.target.value, page: 1 }))
+            }
+            placeholder="Min points"
+            className="w-36"
+          />
+          <Input
+            type="number"
+            min="0"
+            value={filter.maxPoints}
+            onChange={(e) =>
+              setFilter((prev) => ({ ...prev, maxPoints: e.target.value, page: 1 }))
+            }
+            placeholder="Max points"
+            className="w-36"
+          />
+          <CustomSelect
+            options={[
+              { label: "All Members", value: "all" },
+              { label: "Redeemed", value: "yes" },
+              { label: "Not Redeemed", value: "no" },
+            ]}
+            placeholder="Has Redeemed"
+            value={filter.hasRedeemed}
+            onValueChange={(value) =>
+              setFilter((prev) => ({ ...prev, hasRedeemed: value, page: 1 }))
+            }
+            className="w-44"
           />
         </header>
 
         {isSuccess && (
           <DataTable
             columns={LoyaltyUserColumns}
-            data={filteredData}
+            data={loyaltyData}
             page={filter.page - 1}
             totalPage={pagination.totalPages}
             changePage={changePage}
@@ -137,7 +186,7 @@ const LoyaltyUsersList = () => {
 
         {isLoading && <LoadingScreen />}
 
-        {isSuccess && filteredData.length === 0 && (
+        {isSuccess && loyaltyData.length === 0 && (
           <div className="text-center py-10 text-gray-500">
             <Trophy className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <p>No loyalty members found</p>

@@ -167,11 +167,11 @@ export const useRepeatPurchaseRate = (params?: { startDate?: string; endDate?: s
   });
 };
 
-export const useStockTurnover = () => {
+export const useStockTurnover = (params?: { materialId?: string; genderId?: string; itemId?: string; categoryId?: string }) => {
   return useQuery({
-    queryKey: ["stock-turnover"],
+    queryKey: ["stock-turnover", params],
     queryFn: async () => {
-      const response = await dashboardAnalyticsAPI.getStockTurnover();
+      const response = await dashboardAnalyticsAPI.getStockTurnover(params);
       return response.data?.data;
     },
     staleTime: 60 * 5,

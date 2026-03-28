@@ -28,6 +28,11 @@ export const useGetAllUsersLoyalty = (params?: {
   limit?: number;
   sortBy?: string;
   sortOrder?: string;
+  search?: string;
+  tier?: string;
+  minPoints?: string;
+  maxPoints?: string;
+  hasRedeemed?: string;
 }) => {
   return useQuery({
     queryKey: ["loyalty", "users", params],

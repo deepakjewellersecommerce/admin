@@ -4,10 +4,10 @@ import { toast } from "sonner"; // Ensure this is the correct import path
 import { couponAPI } from "../axios/coupon-API";
 
 // Fetch all coupons
-export const useGetCoupons = () => {
+export const useGetCoupons = (filter?: unknown) => {
   return useQuery({
-    queryKey: ["coupons"],
-    queryFn: () => couponAPI.getCoupons(),
+    queryKey: ["coupons", filter],
+    queryFn: () => couponAPI.getCoupons(filter),
     staleTime: 15 * 60 * 1000, // Caches the data for 15 minutes
   });
 };
