@@ -100,8 +100,17 @@ const ProductList = () => {
     return params;
   }, [selectedMaterialId, selectedGenderId, selectedItemId, selectedCategoryId]);
 
+  const turnoverParams = useMemo(() => {
+    const params: Record<string, string> = {};
+    if (selectedMaterialId) params.materialId = selectedMaterialId;
+    if (selectedGenderId) params.genderId = selectedGenderId;
+    if (selectedItemId) params.itemId = selectedItemId;
+    if (selectedCategoryId) params.categoryId = selectedCategoryId;
+    return params;
+  }, [selectedMaterialId, selectedGenderId, selectedItemId, selectedCategoryId]);
+
   const { data: categoryDistRaw } = useCategoryDistribution(distParams);
-  const { data: stockTurnoverRaw } = useStockTurnover();
+  const { data: stockTurnoverRaw } = useStockTurnover(turnoverParams);
 
   const categoryDist = Array.isArray(categoryDistRaw?.data ?? categoryDistRaw) ? (categoryDistRaw?.data ?? categoryDistRaw) : [];
   const stockTurnover = Array.isArray(stockTurnoverRaw?.data ?? stockTurnoverRaw) ? (stockTurnoverRaw?.data ?? stockTurnoverRaw) : [];

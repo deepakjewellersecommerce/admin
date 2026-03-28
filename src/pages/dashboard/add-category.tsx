@@ -162,8 +162,16 @@ const AddCategoryPage = () => {
         isActive: data.isActive,
       },
       {
-        onSuccess: () => {
-          navigate("/dashboard/catalog/categories");
+        onSuccess: (response: any) => {
+          const newId =
+            response?.data?._id ||
+            response?.data?.data?._id ||
+            response?._id;
+          if (newId) {
+            navigate(`/dashboard/catalog/categories/${newId}/add`);
+          } else {
+            navigate("/dashboard/catalog/categories");
+          }
         },
       }
     );
@@ -312,11 +320,11 @@ const AddCategoryPage = () => {
                         <Plus className="h-3 w-3 mr-1" /> Add
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
+                    <DialogContent className="flex flex-col max-h-[90vh]">
+                      <DialogHeader className="shrink-0">
                         <DialogTitle>Add Material</DialogTitle>
                       </DialogHeader>
-                      <div className="space-y-4 py-4">
+                      <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-1">
                         <div className="space-y-2">
                           <Label>Name *</Label>
                           <Input
@@ -427,7 +435,7 @@ const AddCategoryPage = () => {
                           </div>
                         )}
                       </div>
-                      <DialogFooter>
+                      <DialogFooter className="shrink-0 pt-2 border-t">
                         <Button variant="outline" onClick={() => {
                           setShowMaterialDialog(false);
                           setNewMaterial({

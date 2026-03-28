@@ -220,10 +220,10 @@ export const useAddCategory = () => {
   });
 };
 
-export const useGetProductVariants = (id: string) => {
+export const useGetProductVariants = (id: string, filter?: unknown) => {
   return useQuery({
-    queryKey: ["productVariants", id],
-    queryFn: () => productAPI.getProductVariants(id),
+    queryKey: ["productVariants", id, filter],
+    queryFn: () => productAPI.getProductVariants(id, filter),
     enabled: Boolean(id),
     staleTime: 15 * 60 * 1000,
   });

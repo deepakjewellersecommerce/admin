@@ -14,13 +14,16 @@ import RfidTagSection from "../products/rfid-tag-section";
 
 const ProductVariantList = () => {
   const [filter, setFilter] = useState({
-    size: "",
+    size: "all",
     search: "",
+    stockStatus: "all",
   });
 
   const { id } = useParams();
 
-  const { isLoading, data, isSuccess } = useGetProductVariants(String(id));
+  const { isLoading, data, isSuccess } = useGetProductVariants(String(id), {
+    stockStatus: filter.stockStatus,
+  });
 
   const productVariants: ProductVariant[] = useMemo(() => {
     if (isSuccess && data) {
@@ -30,11 +33,10 @@ const ProductVariantList = () => {
           variant.price.toString().includes(filter.search.toLowerCase())
       ) as ProductVariant[];
 
-      if (filter.size) {
-        if (filter.size !== "all")
-          filteredVariants = filteredVariants.filter(
-            (variant) => variant.size === filter.size
-          );
+      if (filter.size !== "all") {
+        filteredVariants = filteredVariants.filter(
+          (variant) => variant.size === filter.size
+        );
       }
       return filteredVariants;
     }
@@ -76,6 +78,17 @@ const ProductVariantList = () => {
             value={filter.size}
             onValueChange={(e) => setFilter({ ...filter, size: e })}
             className="w-40 ml-4"
+          />
+          <CustomSelect
+            options={[
+              { label: "All Stock", value: "all" },
+              { label: "In Stock", value: "in_stock" },
+              { label: "Out of Stock", value: "out_of_stock" },
+            ]}
+            placeholder="Filter by Stock"
+            value={filter.stockStatus}
+            onValueChange={(e) => setFilter({ ...filter, stockStatus: e })}
+            className="w-44 ml-4"
           />
           <Link className="ml-auto" to={`/dashboard/product-variant/${id}/add`}>
             <Button size={"sm"} color={"violet"}>

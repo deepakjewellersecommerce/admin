@@ -39,8 +39,15 @@ export const productAPI = {
   uploadProducts: async (payload:unknown) => {
     return instance.post('/admin/product/bulk', payload);
   },
-  getProductVariants: async (id:string) => {
-    return instance.get(`/product-variant/${id}/all`);
+  getProductVariants: async (id:string, filter: any = {}) => {
+    return instance.get(`/product-variant/${id}/all`, {
+      params: {
+        stockStatus:
+          filter.stockStatus && filter.stockStatus !== 'all'
+            ? filter.stockStatus
+            : undefined,
+      },
+    });
   },
   addProductVariant: async (payload:any) => {
     const formData = new FormData();

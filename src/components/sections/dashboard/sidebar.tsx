@@ -21,6 +21,7 @@ import {
   GalleryVertical,
   Palette,
   Rocket,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -63,6 +64,7 @@ const standaloneItems: NavItem[] = [
   { label: "Metal Pricing", icon: Coins, href: "/pricing/metals" },
   { label: "Blog", icon: PenBox, href: "/blogs/list" },
   { label: "Settings", icon: Settings2, href: "/settings/web" },
+  { label: "GST Report", icon: FileSpreadsheet, href: "/reports/gst" },
 ];
 
 const Sidebar = ({ className }: PropsWithClassName) => {

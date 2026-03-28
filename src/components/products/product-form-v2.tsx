@@ -10,7 +10,7 @@ import FormProvider from "../form/FormProvider";
 import { useMemo, useEffect, useState } from "react";
 import FormSwitch from "../form/form-switch";
 import FormGroupSelect from "../form/FormCombobox";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   useGetAllSubcategoriesFlat,
@@ -19,6 +19,7 @@ import {
   useGetAllItems,
   useGetAllCategories,
   useGetAllSubcategories,
+  useGetSubcategory,
 } from "@/lib/react-query/category-hierarchy-query";
 import { useGetAllMetalPrices } from "@/lib/react-query/metal-price-query";
 import { useGetNextSKU } from "@/lib/react-query/product-sequence-query";
@@ -26,7 +27,7 @@ import type { SubcategoryFlat } from "@/lib/axios/category-hierarchy-API";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
-import { AlertCircle, Calculator, Info } from "lucide-react";
+import { AlertCircle, Calculator, Info, ShieldCheck } from "lucide-react";
 import { Alert, AlertDescription } from "../ui/alert";
 import {
   Select,
@@ -147,11 +148,24 @@ const extractMetalType = (material: any): string | null => {
   return null;
 };
 
+const CARE_OPTIONS = [
+  "Store in a cool, dry place",
+  "Avoid contact with water",
+  "Clean with a soft cloth",
+  "Remove before sleeping or exercising",
+  "Avoid exposure to chemicals and perfume",
+  "Store separately to avoid scratches",
+];
+
 const ProductFormV2 = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const preselectedSubcategoryId = searchParams.get("subcategoryId") ?? "";
+
   const [pricePreview] = useState<any>(null);
   const [weightWarning, setWeightWarning] = useState<string | null>(null);
   const [skuPreview, setSkuPreview] = useState<string>("");
+  const [selectedCareItems, setSelectedCareItems] = useState<string[]>([]);
 
   // Hierarchy selection state
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>("");
@@ -183,6 +197,9 @@ const ProductFormV2 = () => {
   const { data: subcategoriesRaw } = useGetAllSubcategories({
     ...(selectedCategoryId ? { categoryId: selectedCategoryId } : {}),
   });
+
+  // Fetch the preselected subcategory (from ?subcategoryId= URL param)
+  const { data: preselectedSubRaw } = useGetSubcategory(preselectedSubcategoryId);
 
   // Extract arrays from API responses
   const materials = useMemo(() => {
@@ -299,6 +316,34 @@ const ProductFormV2 = () => {
     }
   }, [selectedMaterialId, selectedGenderId, selectedItemId, selectedCategoryId, form]);
 
+  // Pre-populate hierarchy from ?subcategoryId URL param
+  useEffect(() => {
+    if (!preselectedSubcategoryId || !preselectedSubRaw) return;
+    const sub =
+      preselectedSubRaw?.data?.subcategory ??
+      preselectedSubRaw?.subcategory ??
+      preselectedSubRaw?.data;
+    if (!sub) return;
+
+    const catId =
+      typeof sub.categoryId === "object" ? sub.categoryId?._id : sub.categoryId;
+    const matId =
+      typeof sub.materialId === "object" ? sub.materialId?._id : sub.materialId;
+    const genId =
+      typeof sub.genderId === "object" ? sub.genderId?._id : sub.genderId;
+    const itmId =
+      typeof sub.itemId === "object" ? sub.itemId?._id : sub.itemId;
+
+    if (matId) setSelectedMaterialId(matId);
+    if (genId) setSelectedGenderId(genId);
+    if (itmId) setSelectedItemId(itmId);
+    if (catId) {
+      setSelectedCategoryId(catId);
+      form.setValue("categoryId", catId, { shouldValidate: false });
+    }
+    form.setValue("subcategoryId", preselectedSubcategoryId, { shouldValidate: false });
+  }, [preselectedSubRaw, preselectedSubcategoryId, form]);
+
   // Auto-update SKU preview when subcategory or box number changes
   useEffect(() => {
     if (skuData?.skuPreview) {
@@ -385,7 +430,7 @@ const ProductFormV2 = () => {
         skuNo: data.skuNo,
         boxNumber: data.boxNumber,
         productDescription: data.productDescription || "",
-        careHandling: data.careHandling || "",
+        careHandling: selectedCareItems.join(" | "),
         subcategoryId: data.subcategoryId,
         // Include hierarchy fields from selected subcategory
         materialId: data.materialId,
@@ -525,12 +570,27 @@ const ProductFormV2 = () => {
     }
   };
 
+  const preselectedSubName = (() => {
+    const sub =
+      preselectedSubRaw?.data?.subcategory ??
+      preselectedSubRaw?.subcategory ??
+      preselectedSubRaw?.data;
+    return sub?.name ?? null;
+  })();
+
   return (
     <section className="flex flex-col space-y-6">
       <header className="border-b pb-4">
         <h1 className="text-2xl font-bold">Add Product</h1>
         <p className="text-sm text-gray-500">Create a new jewelry product with dynamic pricing</p>
       </header>
+
+      {preselectedSubcategoryId && preselectedSubName && (
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <ShieldCheck size={15} className="text-emerald-600 shrink-0" />
+          Subcategory <span className="font-semibold mx-1">"{preselectedSubName}"</span> has been pre-selected for this product.
+        </div>
+      )}
 
       <FormProvider
         methods={form}
@@ -756,12 +816,46 @@ const ProductFormV2 = () => {
                 {form.formState.errors.productDescription && (
                   <p className="text-sm text-red-500 mt-1">{form.formState.errors.productDescription.message}</p>
                 )}
-                <FormTextArea
-                  control={form.control}
-                  name="careHandling"
-                  label="Care & Handling"
-                  placeholder="Enter care instructions"
-                />
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <ShieldCheck size={15} className="text-violet-500" />
+                    <span className="text-sm font-medium">Care &amp; Handling</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {CARE_OPTIONS.map((option) => {
+                      const checked = selectedCareItems.includes(option);
+                      return (
+                        <label
+                          key={option}
+                          className={`flex items-center gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer text-sm transition-colors ${
+                            checked
+                              ? "border-violet-400 bg-violet-50 text-violet-800"
+                              : "border-gray-200 bg-white text-muted-foreground hover:border-violet-200 hover:bg-violet-50/50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="accent-violet-600"
+                            checked={checked}
+                            onChange={() =>
+                              setSelectedCareItems((prev) =>
+                                checked
+                                  ? prev.filter((i) => i !== option)
+                                  : [...prev, option]
+                              )
+                            }
+                          />
+                          {option}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {selectedCareItems.length > 0 && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {selectedCareItems.length} instruction{selectedCareItems.length > 1 ? "s" : ""} selected
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
 

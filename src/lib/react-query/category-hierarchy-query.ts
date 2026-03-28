@@ -44,7 +44,7 @@ export const useUpdateMetalGroup = () => {
       queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "materials"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to update metal group");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to update metal group");
     },
   });
 };
@@ -61,7 +61,7 @@ export const useUpdateMetalGroupPremium = () => {
       queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "materials"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to update premium");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to update premium");
     },
   });
 };
@@ -77,7 +77,7 @@ export const useFetchLiveMCXPrices = () => {
       queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "materials"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to fetch live prices");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to fetch live prices");
     },
   });
 };
@@ -110,7 +110,8 @@ export const useCreateMaterial = () => {
       queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "hierarchy"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to create material");
+      const msg = error.response?.data?.error?.message || error.response?.data?.message || "Failed to create material";
+      toast.error(msg);
     },
   });
 };
@@ -125,7 +126,7 @@ export const useUpdateMaterial = () => {
       queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "materials"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to update material");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to update material");
     },
   });
 };
@@ -158,7 +159,7 @@ export const useCreateGender = () => {
       queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "hierarchy"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to create gender");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to create gender");
     },
   });
 };
@@ -173,7 +174,7 @@ export const useUpdateGender = () => {
       queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "genders"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to update gender");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to update gender");
     },
   });
 };
@@ -206,7 +207,7 @@ export const useCreateItem = () => {
       queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "hierarchy"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to create item type");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to create item type");
     },
   });
 };
@@ -221,7 +222,7 @@ export const useUpdateItem = () => {
       queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "items"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to update item type");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to update item type");
     },
   });
 };
@@ -259,7 +260,7 @@ export const useCreateCategory = () => {
       queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "hierarchy"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to create category");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to create category");
     },
   });
 };
@@ -274,7 +275,7 @@ export const useUpdateCategory = () => {
       queryClient.invalidateQueries({ queryKey: ["categoryHierarchy", "categories"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to update category");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to update category");
     },
   });
 };
@@ -340,7 +341,7 @@ export const useQuickCreate = () => {
       queryClient.invalidateQueries({ queryKey: ["categoryHierarchy"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to create");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to create");
     },
   });
 };
@@ -394,7 +395,7 @@ export const useCreateSubcategory = () => {
       queryClient.invalidateQueries({ queryKey: ["subcategories"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to create subcategory");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to create subcategory");
     },
   });
 };
@@ -409,7 +410,7 @@ export const useUpdateSubcategory = () => {
       queryClient.invalidateQueries({ queryKey: ["subcategories"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to update subcategory");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to update subcategory");
     },
   });
 };
@@ -495,7 +496,7 @@ export const useUpdateSubcategoryPricing = () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to update pricing config");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to update pricing config");
     },
   });
 };
@@ -509,7 +510,7 @@ export const useCreateDefaultSubcategoryPricing = () => {
       queryClient.invalidateQueries({ queryKey: ["subcategories", id] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to create default pricing config");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to create default pricing config");
     },
   });
 };
@@ -523,7 +524,7 @@ export const useRemoveSubcategoryPricing = () => {
       queryClient.invalidateQueries({ queryKey: ["subcategories", id] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to remove pricing config");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to remove pricing config");
     },
   });
 };
@@ -545,7 +546,7 @@ export const useFreezeSubcategoryComponent = () => {
       queryClient.invalidateQueries({ queryKey: ["subcategories", variables.id] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to freeze component");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to freeze component");
     },
   });
 };
@@ -560,7 +561,7 @@ export const useUnfreezeSubcategoryComponent = () => {
       queryClient.invalidateQueries({ queryKey: ["subcategories", variables.id] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to unfreeze component");
+      toast.error(error?.response?.data?.error?.message || error?.response?.data?.message || "Failed to unfreeze component");
     },
   });
 };

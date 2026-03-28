@@ -33,6 +33,24 @@ interface Product {
   salePrice?: number;
   regularPrice?: number;
 
+  // Detailed price breakdown (populated by calculatePrice())
+  priceBreakdown?: {
+    components: Array<{
+      componentKey: string;
+      componentName: string;
+      value: number;
+      isFrozen?: boolean;
+      isVisible?: boolean;
+    }>;
+    metalType?: string;
+    metalRate?: number;
+    metalCost?: number;
+    gemstoneCost?: number;
+    subtotal?: number;
+    totalPrice?: number;
+    lastCalculated?: string;
+  };
+
   // Gemstones
   gemstones?: Array<{
     name: string;

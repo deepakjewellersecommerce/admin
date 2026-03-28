@@ -47,6 +47,7 @@ export const OrderView = Loadable(lazy(() => import("@/components/order/order-vi
 export const CouponsList = Loadable(lazy(() => import("@/components/coupons/coupon-list")));
 export const AddCouponForm = Loadable(lazy(() => import("@/components/coupons/add-coupon")));
 export const CartView = Loadable(lazy(() => import("@/components/users/user-cart-view")));
+export const UserProfile = Loadable(lazy(() => import("@/components/users/user-profile")));
 export const AddBlogForm = Loadable(lazy(() => import("@/components/blogs/add-blog-form")));
 export const UpdateProductImage = Loadable(lazy(() => import("@/components/product-variant/update-product-image")));
 export const UpdateProductForm = Loadable(lazy(() => import("@/components/products/update-product-form")));
@@ -84,3 +85,6 @@ export const AnalyticsInventoryPage = Loadable(lazy(() => import("@/pages/dashbo
 export const AnalyticsCustomersPage = Loadable(lazy(() => import("@/pages/dashboard/analytics-customers")));
 export const AnalyticsOrdersPage = Loadable(lazy(() => import("@/pages/dashboard/analytics-orders")));
 export const AnalyticsFinancialPage = Loadable(lazy(() => import("@/pages/dashboard/analytics-financial")));
+
+// Reports
+export const GstReportPage = Loadable(lazy(() => import("@/pages/dashboard/gst-report")));

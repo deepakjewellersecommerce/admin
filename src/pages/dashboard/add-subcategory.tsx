@@ -5,6 +5,12 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -69,6 +75,11 @@ const AddSubcategoryPage = () => {
   const { categoryId, subId } = useParams<{ categoryId: string; subId?: string }>();
   const navigate = useNavigate();
   const [pricingComponents, setPricingComponents] = useState<PricingComponent[]>(DEFAULT_PRICING_COMPONENTS);
+  const [nextStepDialog, setNextStepDialog] = useState<{
+    open: boolean;
+    createdId: string;
+    createdName: string;
+  }>({ open: false, createdId: "", createdName: "" });
 
   // Determine if adding to category or nested subcategory
   const isNestedView = Boolean(subId);
@@ -269,10 +280,14 @@ const AddSubcategoryPage = () => {
     console.log("Submitting payload:", JSON.stringify(payload, null, 2));
 
     createSubcategory(payload, {
-      onSuccess: () => {
-        // Navigate back to the subcategory list
-        if (subId) {
-          navigate(`/dashboard/catalog/categories/${categoryId}/${subId}`);
+      onSuccess: (response: any) => {
+        const newId =
+          response?.data?._id ||
+          response?.data?.data?._id ||
+          response?._id;
+        const newName = data.name;
+        if (newId) {
+          setNextStepDialog({ open: true, createdId: newId, createdName: newName });
         } else {
           navigate(`/dashboard/catalog/categories/${categoryId}`);
         }
@@ -918,6 +933,73 @@ const AddSubcategoryPage = () => {
           </FormProvider>
         </CardContent>
       </Card>
+
+      {/* ── Next Step Dialog ── */}
+      <Dialog open={nextStepDialog.open} onOpenChange={() => {}}>
+        <DialogContent
+          className="max-w-md"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-lg">
+              "{nextStepDialog.createdName}" created!
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground pt-1">
+              What would you like to do next?
+            </p>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-3 pt-2">
+            {/* Option 1: Add child subcategory */}
+            <button
+              type="button"
+              className="flex flex-col items-start gap-1 rounded-lg border border-violet-200 bg-violet-50 px-4 py-3.5 text-left hover:bg-violet-100 transition-colors"
+              onClick={() =>
+                navigate(
+                  `/dashboard/catalog/categories/${categoryId}/${nextStepDialog.createdId}/add`
+                )
+              }
+            >
+              <span className="font-semibold text-violet-800 text-sm">
+                Add a subcategory inside "{nextStepDialog.createdName}"
+              </span>
+              <span className="text-xs text-violet-600">
+                Create a child subcategory nested under this one — e.g., a style or finish variant
+              </span>
+            </button>
+
+            {/* Option 2: Add product */}
+            <button
+              type="button"
+              className="flex flex-col items-start gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3.5 text-left hover:bg-emerald-100 transition-colors"
+              onClick={() =>
+                navigate(
+                  `/dashboard/products/add?subcategoryId=${nextStepDialog.createdId}`
+                )
+              }
+            >
+              <span className="font-semibold text-emerald-800 text-sm">
+                Add a product in "{nextStepDialog.createdName}"
+              </span>
+              <span className="text-xs text-emerald-600">
+                Go to the Add Product form with this subcategory pre-selected
+              </span>
+            </button>
+
+            {/* Option 3: Done */}
+            <button
+              type="button"
+              className="rounded-lg border px-4 py-2.5 text-sm text-muted-foreground hover:bg-muted/50 transition-colors text-left"
+              onClick={() =>
+                navigate(`/dashboard/catalog/categories/${categoryId}`)
+              }
+            >
+              Done — go back to the category
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -13,6 +13,7 @@ import {
   BlogsList,
   BrandsList,
   CartView,
+  UserProfile,
   CategoryList,
   CategoryPage,
   ColorList,
@@ -58,6 +59,7 @@ import {
   AnalyticsCustomersPage,
   AnalyticsOrdersPage,
   AnalyticsFinancialPage,
+  GstReportPage,
 } from "./elements";
 import ProductRatingList from "@/components/product-rating/product-rating-list";
 import UpdateRatingForm from "@/components/review/update-review-form";
@@ -127,6 +129,10 @@ export default function Router() {
         {
           path: "analytics/financial",
           element: <AnalyticsFinancialPage />,
+        },
+        {
+          path: "reports/gst",
+          element: <GstReportPage />,
         },
         {
           path: "coupons/list",
@@ -290,6 +296,10 @@ export default function Router() {
         {
           path: "users/cart/:id",
           element: <CartView />,
+        },
+        {
+          path: "users/:id",
+          element: <UserProfile />,
         },
         {
           path: "blogs/list",

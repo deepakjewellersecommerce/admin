@@ -4,22 +4,35 @@ import * as React from "react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { cn } from "@/lib/utils";
 
-const Tooltip = ({ children, content }: { children: React.ReactNode; content: React.ReactNode }) => {
+interface TooltipProps {
+  children: React.ReactNode;
+  content: React.ReactNode;
+  /** "sm" = default dark pill, "lg" = wide light card for rich content */
+  size?: "sm" | "lg";
+  side?: "top" | "bottom" | "left" | "right";
+}
+
+const Tooltip = ({ children, content, size = "sm", side = "top" }: TooltipProps) => {
   return (
     <TooltipPrimitive.Provider delayDuration={150}>
       <TooltipPrimitive.Root>
         <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
         <TooltipPrimitive.Portal>
           <TooltipPrimitive.Content
-            side="top"
+            side={side}
             align="center"
+            sideOffset={8}
             className={cn(
-              "z-50 rounded-md bg-gray-900 text-white px-2 py-1 text-xs shadow-lg",
+              "z-50 shadow-xl animate-in fade-in-0 zoom-in-95",
+              size === "sm"
+                ? "rounded-md bg-gray-900 text-white px-2 py-1 text-xs"
+                : "rounded-lg border bg-white text-foreground p-0 w-72"
             )}
-            sideOffset={6}
           >
             {content}
-            <TooltipPrimitive.Arrow className="fill-current text-gray-900" />
+            {size === "sm" && (
+              <TooltipPrimitive.Arrow className="fill-gray-900" />
+            )}
           </TooltipPrimitive.Content>
         </TooltipPrimitive.Portal>
       </TooltipPrimitive.Root>
