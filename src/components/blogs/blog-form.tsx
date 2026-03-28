@@ -8,10 +8,12 @@ import FormImageInput from "../form/FormImage";
 import { Separator } from "../ui/separator";
 import { Button } from "../ui/button";
 import { Loader2 } from "lucide-react";
+import FormGroupSelect from "../form/form-select";
 
 const blogSchema = z.object({
   title: z.string(),
   content: z.string(),
+  status: z.enum(["DRAFT", "PUBLISHED"]),
   displayImage: z.array(z.object({ url: z.string().url() })),
 });
 
@@ -26,7 +28,12 @@ type Props = {
 const BlogForm = ({ onSubmit, defaultValues, isPending }: Props) => {
   const form = useForm<BlogType>({
     resolver: zodResolver(blogSchema),
-    defaultValues: defaultValues,
+    defaultValues: defaultValues ?? {
+      title: "",
+      content: "",
+      status: "DRAFT",
+      displayImage: [{ url: "" }],
+    },
   });
 
   return (
@@ -43,6 +50,16 @@ const BlogForm = ({ onSubmit, defaultValues, isPending }: Props) => {
           name="title"
           placeholder="Enter Blog Title"
           label="Blog Title"
+        />
+        <FormGroupSelect
+          control={form.control}
+          name="status"
+          label="Status"
+          placeholder="Select blog status"
+          options={[
+            { label: "Draft", value: "DRAFT" },
+            { label: "Published", value: "PUBLISHED" },
+          ]}
         />
         <div className="mt-4">
           <FormImageInput name="displayImage.0.url" label="Blog Image" />

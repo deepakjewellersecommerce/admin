@@ -25,6 +25,7 @@ const UpdateBlogForm = () => {
     return {
       title: blog.title,
       content: blog.content,
+      status: blog.status ?? "DRAFT",
       displayImage: blog.displayImage,
     };
   }, [blogData]);

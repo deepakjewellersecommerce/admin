@@ -33,6 +33,7 @@ const AddBannerForm = () => {
         const formData = new FormData();
         formData.append("title", String(data.title ?? ""));
         formData.append("content", String(data.content ?? ""));
+        formData.append("isActive", String(Boolean(data.isActive)));
         const nonFiles = images.filter((i: any) => typeof i === "string" || i?.url).map((i: any) => (typeof i === 'string' ? i : i.url));
         nonFiles.forEach((s: string) => formData.append("bannerImages", s));
         images.filter((i: any) => i && typeof i !== "string" && !(i?.url)).forEach((f: File) => formData.append("bannerImages", f));
@@ -58,6 +59,7 @@ const AddBannerForm = () => {
             const formData = new FormData();
             formData.append("title", String(data.title ?? ""));
             formData.append("content", String(data.content ?? ""));
+            formData.append("isActive", String(Boolean(data.isActive)));
             // append any string urls present in images
             const nonFiles = images.filter((i: any) => typeof i === "string" || i?.url).map((i: any) => (typeof i === 'string' ? i : i.url));
             nonFiles.forEach((s: string) => formData.append("bannerImages", s));

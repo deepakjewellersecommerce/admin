@@ -2,10 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { bannerAPI } from "../axios/banner-API";
 
-export const useGetBanners = () => {
+export const useGetBanners = (filter?: unknown) => {
   return useQuery({
-    queryKey: ["banners"],
-    queryFn: () => bannerAPI.getBanners(),
+    queryKey: ["banners", filter],
+    queryFn: () => bannerAPI.getBanners(filter),
     staleTime: 15 * 60 * 1000,
   });
 };

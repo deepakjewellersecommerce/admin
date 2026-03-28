@@ -10,6 +10,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import React from "react";
+import { Badge } from "../ui/badge";
 
 export const BannerColumns: ColumnDef<Banner>[] = [
   {
@@ -35,6 +36,18 @@ export const BannerColumns: ColumnDef<Banner>[] = [
           alt={row.original.title || 'Banner'}
           style={{ maxWidth: '100px' }}
         />
+      );
+    },
+  },
+  {
+    header: "Status",
+    accessorKey: "isActive",
+    cell: ({ row }) => {
+      const isActive = row.original.isActive ?? true;
+      return (
+        <Badge variant={isActive ? "default" : "secondary"}>
+          {isActive ? "Active" : "Inactive"}
+        </Badge>
       );
     },
   },

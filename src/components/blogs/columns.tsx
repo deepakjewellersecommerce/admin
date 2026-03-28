@@ -3,6 +3,7 @@ import { Blog } from "./blogs";
 import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Pencil } from "lucide-react";
+import { Badge } from "../ui/badge";
 
 export const BlogColumns: ColumnDef<Blog>[] = [
   {
@@ -31,6 +32,18 @@ export const BlogColumns: ColumnDef<Blog>[] = [
           className="w-28 h-20 rounded-lg border object-cover"
           loading="lazy"
         />
+      );
+    },
+  },
+  {
+    header: "Status",
+    accessorKey: "status",
+    cell: ({ row }) => {
+      const status = row.original.status ?? "DRAFT";
+      return (
+        <Badge variant={status === "PUBLISHED" ? "default" : "secondary"}>
+          {status === "PUBLISHED" ? "Published" : "Draft"}
+        </Badge>
       );
     },
   },

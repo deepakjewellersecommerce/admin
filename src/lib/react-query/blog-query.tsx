@@ -2,10 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { blogAPI } from "../axios/blog-API";
 
-export const useGetBlogs = () => {
+export const useGetBlogs = (filter?: unknown) => {
   return useQuery({
-    queryKey: ["blogs"],
-    queryFn: () => blogAPI.getBlogs(),
+    queryKey: ["blogs", filter],
+    queryFn: () => blogAPI.getBlogs(filter),
     staleTime: 15 * 60 * 1000,
   });
 };

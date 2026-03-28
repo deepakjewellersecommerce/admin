@@ -5,6 +5,7 @@ export interface Banner {
   title: string;
   content: string;
   slug: string;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

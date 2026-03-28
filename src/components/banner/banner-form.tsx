@@ -8,10 +8,12 @@ import FormTextArea from "../form/FormTextArea";
 import { Button } from "../ui/button";
 import { Loader2 } from "lucide-react";
 import FormImageUploader from "../form/FormMultipleImages";
+import FormSwitch from "../form/form-switch";
 
 const bannerSchema = z.object({
   title: z.string().min(1, "Banner title is required"),
   content: z.string().min(1, "Banner content is required"),
+  isActive: z.boolean().default(true),
   // Accept either string urls or file objects.
   // We relax the schema to allow various shapes since the uploader stores Files or objects (existing urls)
   bannerImages: z.array(z.any()).optional(),
@@ -29,7 +31,12 @@ type Props = {
 const BannerForm = ({ onSubmit, defaultValues, isPending, onChange }: Props) => {
   const form = useForm<BannerType>({
     resolver: zodResolver(bannerSchema),
-    defaultValues: defaultValues,
+    defaultValues: defaultValues ?? {
+      title: "",
+      content: "",
+      isActive: true,
+      bannerImages: [],
+    },
   });
 
   // Notify parent on form data changes for preview updates
@@ -68,6 +75,12 @@ const BannerForm = ({ onSubmit, defaultValues, isPending, onChange }: Props) => 
           name="content"
           placeholder="Enter Banner Content"
           label="Banner Content"
+        />
+        <FormSwitch
+          control={form.control}
+          name="isActive"
+          label="Banner Active"
+          description="Only active banners should be considered live in admin filters."
         />
 
         <Button className="w-full mt-4" type="submit" disabled={isPending}>

@@ -1,8 +1,18 @@
 import instance from './instance';
 
 export const bannerAPI = {
-    getBanners: async () => {
-        return instance.get('/banners');
+    getBanners: async (filter: any = {}) => {
+        return instance.get('/banners', {
+            params: {
+                page: (filter.pageIndex ?? 0) + 1,
+                limit: filter.pageSize ?? 10,
+                search: filter.search || undefined,
+                isActive:
+                    filter.isActive && filter.isActive !== 'all'
+                        ? filter.isActive === 'active'
+                        : undefined,
+            },
+        });
     },
     addBanner: async (payload: unknown) => {
         return instance.post(`/admin/banners`, payload);
