@@ -9,6 +9,15 @@ export const useGetAllUsers = (filter: unknown) => {
   });
 };
 
+export const useGetUserProfile = (id?: string, page = 1, limit = 10) => {
+  return useQuery({
+    queryKey: ["user", "profile", id, page, limit],
+    queryFn: () => userAPI.getUserProfile(id ?? "", page, limit),
+    enabled: Boolean(id),
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
 export const useGetCart = (id?: string) => {
   return useQuery({
     queryKey: ["user", "cart"],

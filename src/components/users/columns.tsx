@@ -4,6 +4,7 @@ import { Button } from "../ui/button";
 import { Link } from "react-router-dom";
 import { ShoppingCart } from "lucide-react";
 
+
 export const UserColumns: ColumnDef<IUser>[] = [
   {
     header: "Display Image",
@@ -57,7 +58,12 @@ export const UserColumns: ColumnDef<IUser>[] = [
     header: "Name",
     accessorKey: "name",
     cell: ({ row }) => (
-      <span className="whitespace-nowrap">{row.original?.name || "N/A"}</span>
+      <Link
+        to={`/dashboard/users/${row.original._id}`}
+        className="whitespace-nowrap font-medium text-violet-700 hover:underline"
+      >
+        {row.original?.name || "N/A"}
+      </Link>
     ),
   },
   {

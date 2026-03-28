@@ -9,29 +9,67 @@ import { useTopUsers, useTopLocations, useRepeatPurchaseRate } from "@/lib/react
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Users, MapPin, Trophy } from "lucide-react";
 import { InfoTip } from "@/lib/analytics-utils";
+import CustomSelect from "../ui/custom-select";
 
 type TableFilter = {
-  date: string;
   pageIndex: number;
   pageSize: number;
   search: string;
+  accountStatus: string;
+  hasOrders: string;
 };
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(amount);
 
+function GeoTooltip({ active, payload, totalRevenue }: any) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  const avg = d.orderCount > 0 ? d.revenue / d.orderCount : 0;
+  const share = totalRevenue > 0 ? ((d.revenue / totalRevenue) * 100).toFixed(1) : "0";
+
+  return (
+    <div className="rounded-lg border bg-white shadow-lg p-3 text-xs min-w-[180px]">
+      <p className="font-semibold text-sm mb-2 text-foreground">
+        {d.city}{d.state && d.state !== d.city ? `, ${d.state}` : ""}
+      </p>
+      <div className="space-y-1.5">
+        <div className="flex justify-between gap-6">
+          <span className="text-muted-foreground">Revenue</span>
+          <span className="font-medium text-violet-700">{formatCurrency(d.revenue)}</span>
+        </div>
+        <div className="flex justify-between gap-6">
+          <span className="text-muted-foreground">Orders</span>
+          <span className="font-medium">{d.orderCount}</span>
+        </div>
+        <div className="flex justify-between gap-6">
+          <span className="text-muted-foreground">Customers</span>
+          <span className="font-medium">{d.customers ?? "—"}</span>
+        </div>
+        <div className="flex justify-between gap-6">
+          <span className="text-muted-foreground">Avg Order Value</span>
+          <span className="font-medium">{formatCurrency(Math.round(avg))}</span>
+        </div>
+        <div className="border-t pt-1.5 flex justify-between gap-6">
+          <span className="text-muted-foreground">% of Revenue</span>
+          <span className="font-semibold text-violet-600">{share}%</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const UsersList = () => {
-  const [search, setSearch] = useState<string>("");
-  const searchInput = useRef<HTMLInputElement>();
-  const [users, setuserss] = useState<IUsers[]>([]);
+  const searchInput = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState<TableFilter>({
     pageIndex: 0,
     pageSize: 10,
-    date: "",
     search: "",
+    accountStatus: "all",
+    hasOrders: "all",
   });
 
   const changePage = ({ pageIndex }: { pageIndex: number }) => {
@@ -49,21 +87,19 @@ const UsersList = () => {
 
   const topUsers = useMemo(() => (topUsersData || []).slice(0, 5), [topUsersData]);
   const topLocations = useMemo(() => (topLocationsData || []).slice(0, 5), [topLocationsData]);
+  const totalRevenue = useMemo(() => topLocations.reduce((sum: number, l: any) => sum + (l.revenue ?? 0), 0), [topLocations]);
   const topCity = useMemo(() => topLocations[0]?.city || "N/A", [topLocations]);
 
-  useEffect(() => {
-    if (isSuccess) {
-      const userss: IUsers[] = Array.from(data.data.data.users);
-      setuserss(userss);
-    }
-  }, [isSuccess, data]);
+  const users: IUsers[] = isSuccess ? Array.from(data?.data?.data?.users ?? []) : [];
 
   useEffect(() => {
     if (searchInput.current) searchInput.current.focus();
-  });
-  useEffect(() => {
-    setFilter({ search, pageIndex: 0, pageSize: 10, date: "" });
-  }, [search]);
+  }, []);
+
+  const totalPage = Math.max(
+    1,
+    Math.ceil((data?.data?.data?.total ?? 0) / (data?.data?.data?.limit ?? filter.pageSize))
+  );
 
   return (
     <section className="">
@@ -146,10 +182,14 @@ const UsersList = () => {
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={topLocations} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="city" type="category" width={120} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
-                  <Bar dataKey="revenue" fill="#7c3aed" />
+                  <XAxis type="number" tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}K`} tick={{ fontSize: 11 }} />
+                  <YAxis dataKey="city" type="category" width={80} tick={{ fontSize: 12 }} />
+                  <Tooltip content={<GeoTooltip totalRevenue={totalRevenue} />} />
+                  <Bar dataKey="revenue" radius={[0, 4, 4, 0]}>
+                    {topLocations.map((_: any, i: number) => (
+                      <Cell key={i} fill={i === 0 ? "#7c3aed" : `hsl(263, ${70 - i * 10}%, ${55 + i * 5}%)`} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -160,13 +200,42 @@ const UsersList = () => {
       </div>
 
       <div className="mt-4 rounded-lg border bg-white px-4 py-6">
-        <header className="mb-5  ml-2 flex items-center">
+        <header className="mb-5 ml-2 flex flex-wrap items-center gap-4">
           <span className="mr-3 h-8 w-5 rounded-md bg-violet-300"></span>
           <Input
-            value={search}
+            ref={searchInput}
+            value={filter.search}
             placeholder="Search Users here"
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) =>
+              setFilter((prev) => ({ ...prev, search: e.target.value, pageIndex: 0 }))
+            }
             className="w-96 placeholder:text-base"
+          />
+          <CustomSelect
+            options={[
+              { label: "All Statuses", value: "all" },
+              { label: "Active", value: "active" },
+              { label: "Blocked", value: "blocked" },
+            ]}
+            placeholder="Account Status"
+            value={filter.accountStatus}
+            onValueChange={(value) =>
+              setFilter((prev) => ({ ...prev, accountStatus: value, pageIndex: 0 }))
+            }
+            className="w-44"
+          />
+          <CustomSelect
+            options={[
+              { label: "All Users", value: "all" },
+              { label: "Has Orders", value: "yes" },
+              { label: "Registered Only", value: "no" },
+            ]}
+            placeholder="Has Orders"
+            value={filter.hasOrders}
+            onValueChange={(value) =>
+              setFilter((prev) => ({ ...prev, hasOrders: value, pageIndex: 0 }))
+            }
+            className="w-44"
           />
         </header>
         {isSuccess && (
@@ -174,7 +243,7 @@ const UsersList = () => {
             columns={UserColumns}
             data={users}
             page={filter.pageIndex}
-            totalPage={Math.ceil(data.data.data?.total / data.data.data?.limit)}
+            totalPage={totalPage}
             changePage={changePage}
           />
         )}
