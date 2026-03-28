@@ -1,6 +1,8 @@
 import { useGetOrderById } from "@/lib/react-query/order-query";
 import { useParams, useNavigate } from "react-router";
+import { useState } from "react";
 import LoadingScreen from "../common/loading-screen";
+import { orderAPI } from "@/lib/axios/order-API";
 import {
   Card,
   CardContent,
@@ -32,6 +34,7 @@ import {
   MessageSquare,
   Hash,
   User as UserIcon,
+  Download,
 } from "lucide-react";
 
 // ── Helpers ──
@@ -156,6 +159,25 @@ const OrderView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isLoading, data } = useGetOrderById(String(id));
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadInvoice = async () => {
+    if (!id) return;
+    setDownloading(true);
+    try {
+      const res = await orderAPI.downloadInvoice(id);
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoice-${orderDisplayId}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Invoice download failed", err);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (isLoading) return <LoadingScreen />;
 
@@ -208,6 +230,16 @@ const OrderView = () => {
         <span className="text-sm text-muted-foreground sm:ml-auto">
           {orderDate}
         </span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDownloadInvoice}
+          disabled={downloading}
+          className="shrink-0"
+        >
+          <Download className="h-4 w-4 mr-1" />
+          {downloading ? "Generating..." : "Download Invoice"}
+        </Button>
       </div>
 
       {/* ── Two-column Grid ── */}

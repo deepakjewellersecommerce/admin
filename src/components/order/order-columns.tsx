@@ -1,34 +1,57 @@
+import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { Order } from "./orders"; // Assuming there's an Order model similar to Product
+import { Order } from "./orders";
 import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
-import { Eye } from "lucide-react";
+import { Eye, Copy, Check } from "lucide-react";
 import { Badge } from "../ui/badge";
+
+// ── CopyableOrderId ───────────────────────────────────────────────────────────
+// Must be a proper component (not inline in cell) so useState is allowed.
+
+const CopyableOrderId = ({ orderNumber, id }: { orderNumber?: string; id: string }) => {
+  const [copied, setCopied] = useState(false);
+  const display = orderNumber || `#${id.slice(-8).toUpperCase()}`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(display).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      title={`Copy: ${display}`}
+      className="flex items-center gap-1.5 font-mono text-xs font-medium hover:text-violet-600 transition-colors cursor-pointer group"
+    >
+      <span>{display}</span>
+      {copied ? (
+        <Check size={11} className="text-green-500 shrink-0" />
+      ) : (
+        <Copy size={11} className="text-muted-foreground group-hover:text-violet-500 shrink-0" />
+      )}
+    </button>
+  );
+};
+
+// ── Columns ───────────────────────────────────────────────────────────────────
 
 export const OrderColumns: ColumnDef<Order>[] = [
   {
     accessorKey: "serialNumber",
     header: "Sr. No.",
     cell: ({ row, table }) => {
-      // Compute serial number across pages: pageIndex * pageSize + row.index + 1
       const pagination = table.getState().pagination || { pageIndex: 0, pageSize: 10 };
-      const pageIndex = pagination.pageIndex ?? 0;
-      const pageSize = pagination.pageSize ?? 10;
-      const serial = pageIndex * pageSize + (row.index ?? 0) + 1;
+      const serial = (pagination.pageIndex ?? 0) * (pagination.pageSize ?? 10) + (row.index ?? 0) + 1;
       return <span className="text-sm font-semibold">{serial}</span>;
     },
   },
   {
     accessorKey: "orderId",
-    header: "Order id",
-    cell: ({ row }) => (
-      <span className="text-sm font-semibold">{
-        (() => {
-          const id = row.original._id || "";
-          return id.length > 4 ? `${id.slice(0, 4)}...` : id;
-        })()
-      }</span>
-    ),
+    header: "Order ID",
+    cell: ({ row }) => <CopyableOrderId orderNumber={row.original.orderNumber} id={row.original._id || ""} />,
   },
   {
     accessorKey: "userName",
@@ -36,17 +59,15 @@ export const OrderColumns: ColumnDef<Order>[] = [
     cell: ({ row }) => {
       const sa = row.original.shippingAddress || {};
       const buyer = row.original.buyer as any;
-      // preference: shippingAddress name -> buyer.name -> buyer.firstName/lastName -> buyer string -> N/A
-      let name = "";
-      if (sa.firstName || sa.lastName) {
+      let name = sa.name || "";
+      if (!name && (sa.firstName || sa.lastName)) {
         name = [sa.firstName, sa.lastName].filter(Boolean).join(" ");
-      } else if (typeof buyer === "string") {
-        name = buyer;
-      } else if (buyer && typeof buyer === "object") {
+      }
+      if (!name && buyer && typeof buyer === "object") {
         name = buyer.name || [buyer.firstName, buyer.lastName].filter(Boolean).join(" ") || "";
       }
-      name = name || "N/A";
-      return <span className="text-sm">{name}</span>;
+      if (!name && typeof buyer === "string") name = buyer;
+      return <span className="text-sm">{name || "N/A"}</span>;
     },
   },
   {
@@ -55,7 +76,10 @@ export const OrderColumns: ColumnDef<Order>[] = [
     cell: ({ row }) => {
       const sa = row.original.shippingAddress || {};
       const buyer = row.original.buyer as any;
-      const phone = sa.phoneNumber || (buyer && typeof buyer === "object" && buyer.phoneNumber) || "N/A";
+      const phone =
+        sa.phone || sa.phoneNumber ||
+        (buyer && typeof buyer === "object" ? buyer.phoneNumber : "") ||
+        "N/A";
       return <span className="text-sm">{phone}</span>;
     },
   },
@@ -65,26 +89,19 @@ export const OrderColumns: ColumnDef<Order>[] = [
     cell: ({ row }) => {
       const date = new Date(row.original.createdAt);
       return (
-        <span className="text-sm font-semibold">{`${date.getDate()}/${
-          date.getMonth() + 1
-        }/${date.getFullYear()}`}</span>
+        <span className="text-sm font-semibold whitespace-nowrap">
+          {`${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`}
+        </span>
       );
     },
   },
   {
     accessorKey: "price",
-    header: "Price",
+    header: "Amount",
     cell: ({ row }) => {
-      const products = row.original.products || [];
-      let totalPrice = 0;
-
-      products.forEach((product) => {
-        const pPrice = Number(product?.price || 0);
-        totalPrice += isNaN(pPrice) ? 0 : pPrice;
-      });
-      return (
-        <span className="text-sm font-semibold">₹ {totalPrice.toFixed(2).replace(/\.00$/, "")}</span>
-      );
+      const total = row.original.grandTotal
+        ?? (row.original.products || []).reduce((s: number, p: any) => s + Number(p?.price || 0), 0);
+      return <span className="text-sm font-semibold">₹{Number(total).toLocaleString("en-IN")}</span>;
     },
   },
   {
@@ -94,27 +111,48 @@ export const OrderColumns: ColumnDef<Order>[] = [
       const status = (row.original.order_status || "").toString();
       const map: Record<string, string> = {
         PLACED: "yellow",
+        CONFIRMED: "yellow",
+        PROCESSING: "orange",
         SHIPPED: "orange",
+        OUT_FOR_DELIVERY: "orange",
         DELIVERED: "green",
+        CANCELLED_BY_CUSTOMER: "red",
         CANCELLED_BY_ADMIN: "red",
         CANCELLED: "red",
+        RETURNED: "destructive",
+        REFUNDED: "secondary",
       };
-      const variant = (map[status] || "default") as any;
-      const label = (status.replace(/_/g, " ") || "N/A");
-      return <Badge variant={variant}>{label}</Badge>;
+      const label = status.replace(/_/g, " ") || "N/A";
+      return <Badge variant={(map[status] || "default") as any}>{label}</Badge>;
+    },
+  },
+  {
+    accessorKey: "paymentStatus",
+    header: "Payment",
+    cell: ({ row }) => {
+      const status = (row.original.payment_status || "").toString();
+      const map: Record<string, string> = {
+        PENDING: "yellow",
+        COMPLETE: "green",
+        FAILED: "red",
+        REFUNDED: "secondary",
+      };
+      return (
+        <Badge variant={(map[status] || "default") as any} className="text-xs">
+          {status || "N/A"}
+        </Badge>
+      );
     },
   },
   {
     id: "actions",
     header: "Action",
     cell: ({ row }) => (
-      <div className="flex gap-2">
-        <Link to={`/dashboard/orders/${row.original._id}`}>
-          <Button variant="outline" size={"icon"}>
-            <Eye size={20} />
-          </Button>
-        </Link>
-      </div>
+      <Link to={`/dashboard/orders/${row.original._id}`}>
+        <Button variant="outline" size="icon">
+          <Eye size={18} />
+        </Button>
+      </Link>
     ),
   },
 ];
