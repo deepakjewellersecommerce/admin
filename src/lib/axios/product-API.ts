@@ -6,6 +6,7 @@ export const productAPI = {
     return instance.get('/product/all', {
       params: {
         page: filter.pageIndex + 1,
+        limit: filter.pageSize || undefined,
         search: filter.search || undefined,
         // Use subcategoryId when available (deepest filter), else categoryId
         subcategoryId: filter.subcategoryId || undefined,
