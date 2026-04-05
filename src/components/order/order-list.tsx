@@ -5,7 +5,6 @@ import { Input } from "../ui/input";
 import { Order } from "./orders";
 import { useGetOrders } from "@/lib/react-query/order-query";
 import { OrderColumns } from "./order-columns";
-import { useOrderFunnel, useRevenueTrends, useRepeatPurchaseRate } from "@/lib/react-query/dashboard-analytics-query";
 import { Card, CardContent, CardHeader, CardDescription } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -58,43 +57,18 @@ const OrdersList = () => {
 
   const { isLoading, data, isSuccess } = useGetOrders(filter);
 
-  // Analytics hooks — use dateRange (may differ from table filter)
-  const dateParams = useMemo(() => {
-    if (dateRange.startDate && dateRange.endDate) return dateRange;
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - 30);
-    return {
-      startDate: start.toISOString().split("T")[0],
-      endDate: end.toISOString().split("T")[0],
-    };
-  }, [dateRange]);
-
-  const { data: funnelRaw } = useOrderFunnel(dateParams);
-  const { data: trendsRaw } = useRevenueTrends(dateParams);
-  const { data: repeatRaw } = useRepeatPurchaseRate(dateParams);
-
-  const funnelData = Array.isArray(funnelRaw?.data ?? funnelRaw) ? (funnelRaw?.data ?? funnelRaw) : [];
-  const trendsData = Array.isArray(trendsRaw?.data ?? trendsRaw) ? (trendsRaw?.data ?? trendsRaw) : [];
-  const repeatData = repeatRaw?.data ?? repeatRaw;
+  // Unified metrics from the unified orders API response
+  const summary = data?.data?.summary || {
+    totalOrders: 0,
+    completedOrders: 0,
+    avgOrderValue: 0,
+    repeatRate: 0,
+  };
 
   const orders: Order[] = useMemo(() => {
-    if (data) return data?.data?.data?.docs ?? data?.data?.data ?? [];
+    if (data) return data?.data?.data || [];
     return [];
   }, [data]);
-
-  const totalOrders = useMemo(
-    () => funnelData.reduce((s: number, f: any) => s + f.count, 0),
-    [funnelData]
-  );
-  const completedOrders = useMemo(
-    () => funnelData.find((f: any) => f.status === "DELIVERED")?.count || 0,
-    [funnelData]
-  );
-  const avgOrderValue = useMemo(() => {
-    if (!trendsData || trendsData.length === 0) return 0;
-    return trendsData.reduce((s: number, t: any) => s + (t.aov || 0), 0) / trendsData.length;
-  }, [trendsData]);
 
   // Focus search on mount
   useEffect(() => {
@@ -134,7 +108,7 @@ const OrdersList = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalOrders}</div>
+            <div className="text-2xl font-bold">{summary.totalOrders}</div>
           </CardContent>
         </Card>
         <Card>
@@ -144,7 +118,9 @@ const OrdersList = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{completedOrders}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {summary.completedOrders}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -154,7 +130,9 @@ const OrdersList = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(avgOrderValue)}</div>
+            <div className="text-2xl font-bold">
+              {formatCurrency(summary.avgOrderValue)}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -165,10 +143,7 @@ const OrdersList = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold">{repeatData?.rate ?? 0}%</span>
-              <Badge variant="secondary" className="text-xs">
-                {repeatData?.repeatCustomers ?? 0} repeat
-              </Badge>
+              <span className="text-2xl font-bold">{summary.repeatRate}%</span>
             </div>
           </CardContent>
         </Card>
