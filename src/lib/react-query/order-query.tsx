@@ -3,8 +3,11 @@ import { orderAPI } from "../axios/order-API";
 
 export const useGetOrders = (filter: unknown) => {
   return useQuery({
-    queryKey: ["orders",filter],
-    queryFn: () => orderAPI.getOrders(filter),
+    queryKey: ["orders", filter],
+    queryFn: async () => {
+      const res = await orderAPI.getOrders(filter);
+      return res?.data?.data || res?.data || null;
+    },
     staleTime: 15 * 60 * 1000,
   });
 };

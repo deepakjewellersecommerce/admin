@@ -20,6 +20,17 @@ export const orderAPI = {
     getOrderId: async (id: string) => {
         return instance.get(`/admin/order/${id}`);
     },
+    exportOrders: async (filter: any) => {
+        return instance.get('/admin/order/export', {
+            params: {
+                search: filter.search || undefined,
+                payment_status: filter.payment_status || undefined,
+                order_status: filter.order_status || undefined,
+                startDate: filter.startDate || undefined,
+                endDate: filter.endDate || undefined,
+            }
+        });
+    },
     updateOrder: async (data: any) => {
         return instance.put(`/admin/order/${data._id}/update`, data);
     },
