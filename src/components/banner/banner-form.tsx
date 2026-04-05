@@ -9,6 +9,8 @@ import { Button } from "../ui/button";
 import { Loader2 } from "lucide-react";
 import FormImageUploader from "../form/FormMultipleImages";
 import FormSwitch from "../form/form-switch";
+import { useGetProducts } from "@/lib/react-query/product-query";
+import FormCombobox from "../form/FormCombobox";
 
 const bannerSchema = z.object({
   title: z.string().min(1, "Banner title is required"),
@@ -17,6 +19,7 @@ const bannerSchema = z.object({
   // Accept either string urls or file objects.
   // We relax the schema to allow various shapes since the uploader stores Files or objects (existing urls)
   bannerImages: z.array(z.any()).optional(),
+  product: z.string().optional(),
 });
 
 export type BannerType = z.infer<typeof bannerSchema>;
@@ -36,8 +39,14 @@ const BannerForm = ({ onSubmit, defaultValues, isPending, onChange }: Props) => 
       content: "",
       isActive: true,
       bannerImages: [],
+      product: "",
     },
   });
+
+  const { data: productsData } = useGetProducts({ pageIndex: 0, pageSize: 200 });
+  const productOptions = (productsData?.data?.data?.products ?? []).map(
+    (p: { _id: string; title: string }) => ({ label: p.title, value: p._id })
+  );
 
   // Notify parent on form data changes for preview updates
   useEffect(() => {
@@ -81,6 +90,13 @@ const BannerForm = ({ onSubmit, defaultValues, isPending, onChange }: Props) => 
           name="isActive"
           label="Banner Active"
           description="Only active banners should be considered live in admin filters."
+        />
+
+        <FormCombobox
+          control={form.control}
+          name="product"
+          label="Related Product"
+          options={productOptions}
         />
 
         <Button className="w-full mt-4" type="submit" disabled={isPending}>
