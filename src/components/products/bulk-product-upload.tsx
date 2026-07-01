@@ -7,29 +7,40 @@ import { AlertCircle, Download, FileSpreadsheet, UploadIcon } from "lucide-react
 import { useUploadProducts } from "@/lib/react-query/product-query";
 import * as XLSX from 'xlsx';
 
-// Sample template for skin care products
-const sampleSkinCareData = [
+// Sample template for jewelry products
+const sampleJewelryData = [
   {
-    "Product Title": "Hydrating Face Serum",
-    "Product Slug": "hydrating-face-serum",
-    "SKU": "HS-FS-001",
-    "Regular Price": "999",
-    "Sale Price": "799",
-    "Product Description": "Lightweight serum that hydrates and brightens skin.",
-    "Category": "Serums",
-    "GST": "18",
-    "Stock": "50"
+    "Product Title": "Sterling Silver Infinity Ring",
+    "Product Slug": "sterling-silver-infinity-ring",
+    "SKU": "SS-IR-001",
+    "Regular Price": "2499",
+    "Sale Price": "1999",
+    "Product Description": "Elegant 925 sterling silver ring featuring a classic infinity symbol studded with cubic zirconia.",
+    "Category": "Rings",
+    "GST": "3",
+    "Stock": "30"
   },
   {
-    "Product Title": "Gentle Cleansing Gel",
-    "Product Slug": "gentle-cleansing-gel",
-    "SKU": "GC-GG-002",
-    "Regular Price": "499",
-    "Sale Price": "399",
-    "Product Description": "Soap-free gel cleanser for daily use.",
-    "Category": "Cleansers",
-    "GST": "18",
-    "Stock": "120"
+    "Product Title": "Gold Plated Pendant Necklace",
+    "Product Slug": "gold-plated-pendant-necklace",
+    "SKU": "GP-PN-002",
+    "Regular Price": "3499",
+    "Sale Price": "2999",
+    "Product Description": "18K gold plated silver pendant necklace with a brilliant cut solitaire design.",
+    "Category": "Necklaces",
+    "GST": "3",
+    "Stock": "25"
+  },
+  {
+    "Product Title": "Silver Hoop Earrings",
+    "Product Slug": "silver-hoop-earrings",
+    "SKU": "SS-HE-003",
+    "Regular Price": "1499",
+    "Sale Price": "1199",
+    "Product Description": "Classic medium-sized sterling silver hoop earrings with secure click-top closure.",
+    "Category": "Earrings",
+    "GST": "3",
+    "Stock": "50"
   }
 ];
 
@@ -75,7 +86,7 @@ const BulkProductUpload = () => {
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
         
-        // Transform the data to match the API requirements for skin care products
+        // Transform the data to match the API requirements
         const formattedData = jsonData.map((item: any) => ({
           productTitle: item['Product Title'],
           productSlug: item['Product Slug'],
@@ -98,10 +109,10 @@ const BulkProductUpload = () => {
   };
 
   const downloadTemplate = () => {
-  const worksheet = XLSX.utils.json_to_sheet(sampleSkinCareData);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "SkinCare Products");
-  XLSX.writeFile(workbook, "skincare_products_template.xlsx");
+    const worksheet = XLSX.utils.json_to_sheet(sampleJewelryData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Jewelry Products");
+    XLSX.writeFile(workbook, "jewelry_products_template.xlsx");
   };
 
   return (

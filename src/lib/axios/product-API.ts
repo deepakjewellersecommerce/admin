@@ -120,6 +120,11 @@ export const productAPI = {
     return instance.post(`/product/category/add`, payload);
   },
   updateProduct: async (payload:any) => {
+    if (payload instanceof FormData) {
+      return instance.put(`/admin/product/${payload.get("_id")}/edit`, payload, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    }
     return instance.put(`/admin/product/${payload._id}/edit`, payload);
   },
   deleteProduct: async (id: string) => {
@@ -144,7 +149,6 @@ export const productAPI = {
   deleteCategory: async (categoryId: string) => {
     return instance.delete(`/product/category/${categoryId}/delete`);
   },
-  getWalletBalance: () => instance.get('/user/wallet'),
   getLowStockProducts: async (threshold = 5) => {
     // Use the inventory admin endpoint for low-stock data (admin UI)
     return instance.get('/admin/inventory/low-stock', { params: { threshold } });
@@ -154,8 +158,7 @@ export const productAPI = {
     return instance.put(`/admin/product/${productId}/update-pricing`);
   },
   bulkUpdatePricing: async () => {
-    // Removed bulk update pricing endpoint (not used for skin care products)
-    return Promise.resolve({ data: { message: 'Not implemented' } });
+    return instance.post('/admin/product/bulk-update-pricing');
   },
   // Dynamic pricing endpoints removed
   /**

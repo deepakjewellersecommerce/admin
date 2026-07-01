@@ -2,7 +2,7 @@ import instance from './instance';
 
 export const authAPI = {
   registerUser: async (payload: unknown) => {
-    return instance.post('/signup',payload);
+    return instance.post('/admin/signup',payload);
   },
   loginUser:async (payload: unknown) => {
     // Don't include Authorization header for login requests

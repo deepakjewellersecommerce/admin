@@ -4,22 +4,23 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useBulkUpdatePricing } from "@/lib/react-query/product-query";
-import { useGetCurrentSilverRate, useUpdateSilverRate, useGetMarketSilverRate } from "@/lib/react-query/silver-rate-query";
+import { useGetMetalPrice, useUpdateMetalPrice, useFetchMetalPrice } from "@/lib/react-query/metal-price-query";
 import { AlertCircle, RefreshCcw, TrendingUp } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import LoadingScreen from "@/components/common/loading-screen";
+import { toast } from "sonner";
 
 const DynamicPricingPage = () => {
   const [silverRateInput, setSilverRateInput] = useState("");
   const { mutate: updateAllPrices, isPending: isUpdatingPrices } = useBulkUpdatePricing();
-  const { data: silverRateData, isLoading: isLoadingSilverRate } = useGetCurrentSilverRate();
-  const { data: marketRateData, isLoading: isLoadingMarketRate } = useGetMarketSilverRate();
-  const { mutate: updateSilverRate, isPending: isUpdatingSilverRate } = useUpdateSilverRate();
+  const { data: silverRateData, isLoading: isLoadingSilverRate } = useGetMetalPrice("SILVER_925");
+  const { mutate: fetchSilverPrice, isPending: isFetchingSilverPrice } = useFetchMetalPrice();
+  const { mutate: updateSilverRate, isPending: isUpdatingSilverRate } = useUpdateMetalPrice();
   
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   // Extract current silver rate from API response
-  const currentSilverRate = silverRateData?.data?.rate || "";
+  const currentSilverRate = silverRateData?.data?.price?.pricePerGram || silverRateData?.price?.pricePerGram || "";
   
   // Update the input when the API data is loaded
   useEffect(() => {
@@ -37,31 +38,37 @@ const DynamicPricingPage = () => {
   };
   
   const handleFetchCurrentRate = () => {
-    // Use the market rate from the API if available
-    if (marketRateData?.data?.rate) {
-      setSilverRateInput(String(marketRateData.data.rate));
-    } else {
-      // Fallback to simulated rate if API fails
-      const marketRate = (80 + Math.random() * 10).toFixed(2);
-      setSilverRateInput(marketRate);
-    }
+    fetchSilverPrice("SILVER_925", {
+      onSuccess: (response: any) => {
+        const fetchedPrice = response?.data?.price?.pricePerGram || response?.price?.pricePerGram;
+        if (fetchedPrice) {
+          setSilverRateInput(String(fetchedPrice));
+          toast.success("Fetched current silver rate successfully!");
+        } else {
+          toast.error("Could not retrieve rate from response");
+        }
+      }
+    });
   };
   
   const handleApplyRate = () => {
     if (silverRateInput) {
-      updateSilverRate(Number(silverRateInput), {
-        onSuccess: () => {
-          // After updating the silver rate, update product prices
-          updateAllPrices();
-          setLastUpdated(new Date().toLocaleString());
+      updateSilverRate(
+        { metalType: "SILVER_925", pricePerGram: Number(silverRateInput) },
+        {
+          onSuccess: () => {
+            // After updating the silver rate, update product prices
+            updateAllPrices();
+            setLastUpdated(new Date().toLocaleString());
+          }
         }
-      });
+      );
     }
   };
 
   return (
     <div className="space-y-6">
-      {isLoadingSilverRate || isLoadingMarketRate ? (
+      {isLoadingSilverRate ? (
         <LoadingScreen />
       ) : (
         <>
@@ -99,8 +106,8 @@ const DynamicPricingPage = () => {
                       value={silverRateInput}
                       onChange={(e) => setSilverRateInput(e.target.value)}
                     />
-                    <Button variant="outline" onClick={handleFetchCurrentRate}>
-                      Fetch
+                    <Button variant="outline" onClick={handleFetchCurrentRate} disabled={isFetchingSilverPrice}>
+                      {isFetchingSilverPrice ? "Fetching..." : "Fetch"}
                     </Button>
                   </div>
                 </div>

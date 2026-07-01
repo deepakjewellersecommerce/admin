@@ -31,7 +31,7 @@ export const couponAPI = {
   },
 
   getCouponByCode: async (couponCode: string) => {
-    return instance.get(`/coupon/${couponCode}/get}`);
+    return instance.get(`/coupon/${couponCode}/get`);
   },
 
   updateCoupon: async (payload:any) => {
@@ -39,6 +39,6 @@ export const couponAPI = {
   },
 
   deleteCoupon: async (couponId: string) => {
-    return instance.delete(`/coupons/${couponId}`);
+    return instance.delete(`/admin/coupon/${couponId}/delete`);
   },
 };
