@@ -334,7 +334,6 @@ const MetalGroupPricingDashboard = () => {
                     <TableHead>Formula</TableHead>
                     <TableHead>Calculated Price</TableHead>
                     <TableHead>Override</TableHead>
-                    <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -362,11 +361,6 @@ const MetalGroupPricingDashboard = () => {
                         ) : (
                           <span className="text-xs text-muted-foreground">Auto-calculated</span>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={material.isActive ? "default" : "secondary"}>
-                          {material.isActive ? "Active" : "Inactive"}
-                        </Badge>
                       </TableCell>
                     </TableRow>
                   ))}

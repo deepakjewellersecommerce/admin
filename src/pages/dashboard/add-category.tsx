@@ -3,11 +3,11 @@
  * Full page form for creating new categories
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   useGetAllMaterials,
@@ -61,6 +61,7 @@ type CategoryFormData = z.infer<typeof categorySchema>;
 
 const AddCategoryPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [showMaterialDialog, setShowMaterialDialog] = useState(false);
   const [showItemDialog, setShowItemDialog] = useState(false);
 
@@ -105,6 +106,36 @@ const AddCategoryPage = () => {
   const genderId = form.watch("genderId");
   const itemId = form.watch("itemId");
   const idAttribute = form.watch("idAttribute");
+
+  const nameValue = form.watch("name");
+  const [isManualIdOverride, setIsManualIdOverride] = useState(false);
+  const [debouncedName, setDebouncedName] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedName(nameValue || ''), 400);
+    return () => clearTimeout(timer);
+  }, [nameValue]);
+
+  useEffect(() => {
+    if (isManualIdOverride || !debouncedName || debouncedName.trim().length < 2) return;
+    const base = debouncedName.toUpperCase().replace(/[AEIOU\s]/g, '').substring(0, 2);
+    const generated = base.length >= 2 ? base : debouncedName.substring(0, 2).toUpperCase();
+    form.setValue("idAttribute", generated);
+  }, [debouncedName, isManualIdOverride]);
+
+  // Pre-fill from URL params once option data has loaded
+  useEffect(() => {
+    const paramMaterialId = searchParams.get("materialId");
+    const paramGenderId = searchParams.get("genderId");
+    const paramItemId = searchParams.get("itemId");
+    if (!paramMaterialId && !paramGenderId && !paramItemId) return;
+
+    // Only set each value once the corresponding options are loaded
+    // (options must exist for the Select component to display the label)
+    if (paramMaterialId && materialsData) form.setValue("materialId", paramMaterialId);
+    if (paramGenderId && gendersData) form.setValue("genderId", paramGenderId);
+    if (paramItemId && itemsData) form.setValue("itemId", paramItemId);
+  }, [materialsData, gendersData, itemsData, searchParams, form]);
 
   // Build dropdown options
   const materials = useMemo(() => {
@@ -566,9 +597,16 @@ const AddCategoryPage = () => {
                   placeholder="e.g., T"
                   maxLength={10}
                   {...form.register("idAttribute")}
-                  onChange={(e) => form.setValue("idAttribute", e.target.value.toUpperCase())}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase();
+                    form.setValue("idAttribute", val);
+                    setIsManualIdOverride(val.length > 0);
+                  }}
                 />
                 <p className="text-xs text-gray-500">Max 10 characters, no hyphens allowed</p>
+                {!isManualIdOverride && nameValue?.trim().length >= 2 && (
+                  <p className="text-xs text-blue-500">Auto-generated from name. You can edit this.</p>
+                )}
                 {form.formState.errors.idAttribute && (
                   <p className="text-sm text-red-500">{form.formState.errors.idAttribute.message}</p>
                 )}

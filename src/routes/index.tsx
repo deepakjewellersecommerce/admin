@@ -27,7 +27,6 @@ import {
   LoginPage,
   LoyaltyProgramSettings,
   LoyaltyUsersList,
-  MetalPricingDashboard,
   MetalGroupPricingDashboard,
   MetalPriceDashboard,
   NoticationPage,
@@ -54,6 +53,7 @@ import {
   AddSubcategoryPage,
   CategoryHierarchyPage,
   ProductPricingPage,
+  MetalPriceHistoryPage,
   DashboardKPIsPage,
   AnalyticsInventoryPage,
   AnalyticsCustomersPage,
@@ -342,6 +342,11 @@ export default function Router() {
           path: "pricing/metals",
           element: <MetalGroupPricingDashboard />,
         },
+
+    {
+      path: "pricing/metal-price-history",
+      element: <MetalPriceHistoryPage />,
+    },
         {
           path: "catalog/categories",
           element: <CategoryManagementPage />,

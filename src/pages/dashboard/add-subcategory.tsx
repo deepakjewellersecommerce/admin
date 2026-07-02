@@ -19,6 +19,7 @@ import {
   useCreateSubcategory,
   useGetSubcategory,
   useCheckSubcategoryAvailability,
+  useSuggestSubcategoryIdAttribute,
 } from "@/lib/react-query/category-hierarchy-query";
 import { useGetAllMetalPrices } from "@/lib/react-query/metal-price-query";
 
@@ -80,6 +81,8 @@ const AddSubcategoryPage = () => {
     createdId: string;
     createdName: string;
   }>({ open: false, createdId: "", createdName: "" });
+  const [isManualIdOverride, setIsManualIdOverride] = useState(false);
+  const [debouncedName, setDebouncedName] = useState('');
 
   // Determine if adding to category or nested subcategory
   const isNestedView = Boolean(subId);
@@ -119,6 +122,21 @@ const AddSubcategoryPage = () => {
 
   const isIdAvailable = availabilityQuery.data?.data?.available;
   const conflict = availabilityQuery.data?.data?.conflict;
+
+  // Debounce name for idAttribute suggestion
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedName(form.watch("name") || ''), 400);
+    return () => clearTimeout(timer);
+  }, [form.watch("name")]);
+
+  const { data: suggestData } = useSuggestSubcategoryIdAttribute(debouncedName, categoryId);
+
+  // Auto-fill idAttribute from suggestion when not manually overridden
+  useEffect(() => {
+    if (!isManualIdOverride && suggestData?.data?.suggested) {
+      form.setValue("idAttribute", suggestData.data.suggested);
+    }
+  }, [suggestData, isManualIdOverride]);
 
   // Get parent info
   const category = categoryData?.data?.category || categoryData?.category;
@@ -586,10 +604,21 @@ const AddSubcategoryPage = () => {
                     placeholder="e.g., K"
                     maxLength={10}
                     {...form.register("idAttribute")}
-                    onChange={(e) => form.setValue("idAttribute", e.target.value.toUpperCase())}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase();
+                      form.setValue("idAttribute", val);
+                      if (val === '') {
+                        setIsManualIdOverride(false);
+                      } else {
+                        setIsManualIdOverride(true);
+                      }
+                    }}
                   />
                   {form.formState.errors.idAttribute && (
                     <p className="text-sm text-red-500">{form.formState.errors.idAttribute.message}</p>
+                  )}
+                  {!isManualIdOverride && (
+                    <p className="text-xs text-muted-foreground">Auto-generated from name. You can edit this.</p>
                   )}
                   {idAttribute && availabilityQuery.isLoading && (
                     <p className="text-xs text-gray-500">Checking availability...</p>

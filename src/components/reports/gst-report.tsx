@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { Fragment, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { orderAPI } from "@/lib/axios/order-API";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -418,9 +418,8 @@ export default function GstReportPage() {
                         const id = order._id ?? order.orderNumber;
                         const expanded = expandedRows.has(id);
                         return (
-                          <>
+                          <Fragment key={id}>
                             <tr
-                              key={id}
                               className="border-b hover:bg-muted/20 cursor-pointer"
                               onClick={() => toggleRow(id)}
                             >
@@ -483,7 +482,7 @@ export default function GstReportPage() {
 
                             {/* Expanded: email + masked PAN */}
                             {expanded && (
-                              <tr key={`${id}-detail`} className="border-b bg-muted/10">
+                              <tr className="border-b bg-muted/10">
                                 <td></td>
                                 <td colSpan={8} className="px-4 py-2">
                                   <div className="flex gap-6 text-xs text-muted-foreground">
@@ -504,7 +503,7 @@ export default function GstReportPage() {
                                 </td>
                               </tr>
                             )}
-                          </>
+                          </Fragment>
                         );
                       })}
                     </tbody>

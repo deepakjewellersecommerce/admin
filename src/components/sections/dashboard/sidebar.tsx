@@ -22,6 +22,7 @@ import {
   Palette,
   Rocket,
   FileSpreadsheet,
+  History,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -62,6 +63,7 @@ const standaloneItems: NavItem[] = [
   { label: "Banners", icon: GalleryVertical, href: "/banners/list" },
   { label: "Coupons", icon: TicketIcon, href: "/coupons/list" },
   { label: "Metal Pricing", icon: Coins, href: "/pricing/metals" },
+  { label: "Price History", icon: History, href: "/pricing/metal-price-history" },
   { label: "Blog", icon: PenBox, href: "/blogs/list" },
   { label: "Settings", icon: Settings2, href: "/settings/web" },
   { label: "GST Report", icon: FileSpreadsheet, href: "/reports/gst" },

@@ -7,6 +7,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import productPricingAPI, { ProductPricingComponent } from "../axios/product-pricing-API";
 import { toast } from "sonner";
 
+const extractErrorMessage = (error: any, fallback: string): string => {
+  const err = error.response?.data?.error;
+  if (typeof err === "string") return err;
+  if (err?.message) return err.message;
+  return error.response?.data?.message ?? error.message ?? fallback;
+};
+
 /**
  * Hook to get pricing modes enum
  */
@@ -30,7 +37,7 @@ export const useCalculateProductPrice = () => {
       queryClient.invalidateQueries({ queryKey: ["products", productId] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to calculate price");
+      toast.error(extractErrorMessage(error, "Failed to calculate price"));
     },
   });
 };
@@ -86,7 +93,7 @@ export const useUpdatePricingMode = () => {
       queryClient.invalidateQueries({ queryKey: ["productPricing", variables.productId] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to update pricing mode");
+      toast.error(extractErrorMessage(error, "Failed to update pricing mode"));
     },
   });
 };
@@ -104,7 +111,7 @@ export const useCustomizePricing = () => {
       queryClient.invalidateQueries({ queryKey: ["productPricing", productId] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to customize pricing");
+      toast.error(extractErrorMessage(error, "Failed to customize pricing"));
     },
   });
 };
@@ -123,7 +130,7 @@ export const useRevertToSubcategoryPricing = () => {
       queryClient.invalidateQueries({ queryKey: ["productPricing", productId] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to revert pricing");
+      toast.error(extractErrorMessage(error, "Failed to revert pricing"));
     },
   });
 };
@@ -149,7 +156,7 @@ export const useUpdateProductPricingConfig = () => {
       });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to update pricing config");
+      toast.error(extractErrorMessage(error, "Failed to update pricing config"));
     },
   });
 };
@@ -200,7 +207,7 @@ export const useFreezeProductComponent = () => {
       });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to freeze component");
+      toast.error(extractErrorMessage(error, "Failed to freeze component"));
     },
   });
 };
@@ -226,7 +233,7 @@ export const useUnfreezeProductComponent = () => {
       });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to unfreeze component");
+      toast.error(extractErrorMessage(error, "Failed to unfreeze component"));
     },
   });
 };
@@ -246,7 +253,7 @@ export const useBulkRecalculatePrices = () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Bulk recalculation failed");
+      toast.error(extractErrorMessage(error, "Bulk recalculation failed"));
     },
   });
 };

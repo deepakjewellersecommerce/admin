@@ -347,7 +347,7 @@ export const updateCategory = async (id: string, data: Partial<Category>) => {
   return response.data;
 };
 export const deleteCategory = async (id: string) => {
-  const response = await instance.delete(`/admin/product/category/${id}/delete`);
+  const response = await instance.delete(`/admin/categories/categories/${id}`);
   return response.data;
 };
 export const getCategoryImpact = async (id: string) => {
@@ -547,6 +547,13 @@ export const getSubcategoryAffectedProducts = async (
   return response.data;
 };
 
+export const suggestSubcategoryIdAttribute = async (name: string, parentCategoryId?: string) => {
+  const response = await instance.get('/admin/subcategories/suggest-id-attribute', {
+    params: { name, parentCategoryId }
+  });
+  return response.data;
+};
+
 export default {
   // Metal Groups
   getAllMetalGroups,
@@ -602,5 +609,6 @@ export default {
   getSubcategoryFreezeHistory,
   freezeSubcategoryComponent,
   unfreezeSubcategoryComponent,
-  getSubcategoryAffectedProducts
+  getSubcategoryAffectedProducts,
+  suggestSubcategoryIdAttribute
 };

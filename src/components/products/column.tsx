@@ -2,7 +2,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import Product from "./product";
 import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
-import { Pencil, Trash2, DollarSign, Eye, Info } from "lucide-react";
+import { Pencil, Trash2, DollarSign, Info, Eye } from "lucide-react";
 import AlertConfirm from "../ui/alert-confirm";
 import { useDeleteProduct } from "@/lib/react-query/product-query";
 import { Badge } from "../ui/badge";
@@ -316,16 +316,6 @@ function ActionButtons({ id }: { id?: string }) {
 
   return (
     <div className="flex items-center justify-end gap-1">
-      <Link to={`/dashboard/products/view/${id}`}>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-          title="View Variants & RFID"
-        >
-          <Eye size={15} />
-        </Button>
-      </Link>
       <Button
         variant="ghost"
         size="icon"
@@ -335,6 +325,16 @@ function ActionButtons({ id }: { id?: string }) {
       >
         <DollarSign size={15} />
       </Button>
+      <Link to={`/dashboard/products/view/${id}`}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          title="View"
+        >
+          <Eye size={15} />
+        </Button>
+      </Link>
       <Link to={`/dashboard/products/edit/${id}`}>
         <Button
           variant="ghost"

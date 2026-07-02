@@ -78,6 +78,7 @@ export const SubcategoryListPage = Loadable(lazy(() => import("@/pages/dashboard
 export const AddCategoryPage = Loadable(lazy(() => import("@/pages/dashboard/add-category")));
 export const AddSubcategoryPage = Loadable(lazy(() => import("@/pages/dashboard/add-subcategory")));
 export const ProductPricingPage = Loadable(lazy(() => import("@/pages/dashboard/product-pricing")));
+export const MetalPriceHistoryPage = Loadable(lazy(() => import("@/pages/dashboard/metal-price-history")));
 
 // Analytics Pages
 export const DashboardKPIsPage = Loadable(lazy(() => import("@/pages/dashboard/dashboard-kpis")));

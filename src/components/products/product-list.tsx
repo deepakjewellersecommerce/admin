@@ -2,18 +2,26 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import LoadingScreen from "../common/loading-screen";
-import DataTable from "../table/data-table-server";
 import Product from "./product";
-import { useGetProducts } from "@/lib/react-query/product-query";
+import { useGetProducts, useGetProductVariants } from "@/lib/react-query/product-query";
 import { Input } from "../ui/input";
 import { ProductColumns } from "./column";
 import { useCategoryDistribution, useStockTurnover } from "@/lib/react-query/dashboard-analytics-query";
 import { useGetAllMaterials, useGetAllGenders, useGetAllItems, useGetAllCategories, useGetAllSubcategories } from "@/lib/react-query/category-hierarchy-query";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { Package, BarChart3, ChevronRight, X, Filter, Plus } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
+import { Package, BarChart3, ChevronRight, X, Filter, Plus, ChevronDown, ChevronUp, ImageIcon } from "lucide-react";
 import { Button } from "../ui/button";
+import { flexRender, getCoreRowModel, useReactTable, PaginationState } from "@tanstack/react-table";
+import ErrorBoundary from "../ui/error-boundary";
 
 type TableFilter = {
   date: string;
@@ -24,14 +32,133 @@ type TableFilter = {
   subcategoryId?: string;
 };
 
-const formatNumber = (n: number) => new Intl.NumberFormat('en-IN').format(n);
+const formatNumber = (n: number) => new Intl.NumberFormat("en-IN").format(n);
+const fmt = (n: number) =>
+  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+
+// ---------------------------------------------------------------------------
+// Expanded variant sub-table for one product
+// ---------------------------------------------------------------------------
+
+function ProductVariantsRow({ productId, colSpan }: { productId: string; colSpan: number }) {
+  const { data, isLoading } = useGetProductVariants(productId);
+
+  const variants = useMemo(() => {
+    const raw =
+      data?.data?.data?.variants ??
+      data?.data?.variants ??
+      data?.variants ??
+      [];
+    return Array.isArray(raw) ? raw : [];
+  }, [data]);
+
+  return (
+    <TableRow className="bg-violet-50/40 hover:bg-violet-50/60">
+      <TableCell colSpan={colSpan} className="px-6 py-3">
+        {isLoading && (
+          <p className="text-sm text-muted-foreground py-2">Loading variants...</p>
+        )}
+        {!isLoading && variants.length === 0 && (
+          <p className="text-sm text-muted-foreground py-2 italic">No variants for this product.</p>
+        )}
+        {!isLoading && variants.length > 0 && (
+          <div className="rounded-md border border-violet-100 overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-violet-100/60 hover:bg-violet-100/60">
+                  <TableHead className="h-8 px-3 text-xs text-violet-700 w-12">Img</TableHead>
+                  <TableHead className="h-8 px-3 text-xs text-violet-700">Color</TableHead>
+                  <TableHead className="h-8 px-3 text-xs text-violet-700">Size</TableHead>
+                  <TableHead className="h-8 px-3 text-xs text-violet-700">Gross Wt</TableHead>
+                  <TableHead className="h-8 px-3 text-xs text-violet-700">Net Wt</TableHead>
+                  <TableHead className="h-8 px-3 text-xs text-violet-700">Stock</TableHead>
+                  <TableHead className="h-8 px-3 text-xs text-violet-700">Price</TableHead>
+                  <TableHead className="h-8 px-3 text-xs text-violet-700">Sale Price</TableHead>
+                  <TableHead className="h-8 px-3 text-xs text-violet-700">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {variants.map((v: any) => {
+                  const imgSrc = Array.isArray(v.imageUrls) && v.imageUrls.length > 0
+                    ? (typeof v.imageUrls[0] === "object" ? v.imageUrls[0]?.url ?? "" : v.imageUrls[0])
+                    : null;
+                  const colorName = typeof v.color === "object" ? v.color?.color_name : v.color;
+                  const colorHex = typeof v.color === "object" ? v.color?.hexcode : null;
+
+                  return (
+                    <TableRow key={v._id} className="border-violet-100 hover:bg-violet-50/40">
+                      <TableCell className="px-3 py-2">
+                        {imgSrc ? (
+                          <img src={imgSrc} alt="" className="h-9 w-9 rounded object-cover border border-violet-100" />
+                        ) : (
+                          <div className="h-9 w-9 rounded border border-violet-100 bg-white flex items-center justify-center">
+                            <ImageIcon size={14} className="text-gray-300" />
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm">
+                        {colorName ? (
+                          <div className="flex items-center gap-1.5">
+                            {colorHex && (
+                              <span className="h-3 w-3 rounded-full border inline-block" style={{ backgroundColor: colorHex }} />
+                            )}
+                            {colorName}
+                          </div>
+                        ) : "—"}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm">{v.size || "—"}</TableCell>
+                      <TableCell className="px-3 py-2 text-sm tabular-nums">
+                        {v.grossWeight != null ? `${v.grossWeight}g` : "—"}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm tabular-nums">
+                        {v.netWeight != null ? `${v.netWeight}g` : "—"}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm tabular-nums">
+                        <span className={v.stock === 0 ? "text-red-500 font-medium" : ""}>
+                          {v.stock ?? "—"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm tabular-nums">
+                        {v.price != null ? fmt(v.price) : "—"}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm tabular-nums">
+                        {v.salePrice != null && v.salePrice > 0 ? fmt(v.salePrice) : "—"}
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
+                        <Badge
+                          variant="outline"
+                          className={
+                            v.isActive
+                              ? "text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-50 shadow-none text-xs"
+                              : "text-red-700 border-red-200 bg-red-50 hover:bg-red-50 shadow-none text-xs"
+                          }
+                        >
+                          {v.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </TableCell>
+    </TableRow>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main product list
+// ---------------------------------------------------------------------------
 
 const ProductList = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState<string>("");
   const [products, setproducts] = useState<Product[]>([]);
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [filter, setFilter] = useState<TableFilter>({
-    pageIndex: 0,   // Fix 1: was 2 — first render should be page 1
+    pageIndex: 0,
     pageSize: 10,
     date: "",
     search: "",
@@ -57,7 +184,6 @@ const ProductList = () => {
     selectedCategoryId ? { categoryId: selectedCategoryId } : {}
   );
 
-  // Extract arrays from API responses
   const materials = useMemo(() => {
     const d = materialsRaw?.data?.materials ?? materialsRaw?.materials;
     return Array.isArray(d) ? d : [];
@@ -83,20 +209,17 @@ const ProductList = () => {
     return Array.isArray(d) ? d : [];
   }, [subcategoriesRaw]);
 
-  // Determine the groupBy level and build params for category distribution
   const distParams = useMemo(() => {
     const params: Record<string, string> = {};
     if (selectedMaterialId) params.materialId = selectedMaterialId;
     if (selectedGenderId) params.genderId = selectedGenderId;
     if (selectedItemId) params.itemId = selectedItemId;
     if (selectedCategoryId) params.categoryId = selectedCategoryId;
-
     if (selectedCategoryId) params.groupBy = "category";
     else if (selectedItemId) params.groupBy = "category";
     else if (selectedGenderId) params.groupBy = "item";
     else if (selectedMaterialId) params.groupBy = "gender";
     else params.groupBy = "material";
-
     return params;
   }, [selectedMaterialId, selectedGenderId, selectedItemId, selectedCategoryId]);
 
@@ -112,30 +235,27 @@ const ProductList = () => {
   const { data: categoryDistRaw } = useCategoryDistribution(distParams);
   const { data: stockTurnoverRaw } = useStockTurnover(turnoverParams);
 
-  const categoryDist = Array.isArray(categoryDistRaw?.data ?? categoryDistRaw) ? (categoryDistRaw?.data ?? categoryDistRaw) : [];
-  const stockTurnover = Array.isArray(stockTurnoverRaw?.data ?? stockTurnoverRaw) ? (stockTurnoverRaw?.data ?? stockTurnoverRaw) : [];
+  const categoryDist = Array.isArray(categoryDistRaw?.data ?? categoryDistRaw)
+    ? categoryDistRaw?.data ?? categoryDistRaw
+    : [];
+  const stockTurnover = Array.isArray(stockTurnoverRaw?.data ?? stockTurnoverRaw)
+    ? stockTurnoverRaw?.data ?? stockTurnoverRaw
+    : [];
 
-  const changePage = ({ pageIndex }: { pageIndex: number }) => {
-    setFilter((prev) => ({ ...prev, pageIndex }));
-  };
-
-  const { isLoading, data, isSuccess, isError } = useGetProducts(filter);  // Fix 6: added isError
+  const { isLoading, data, isSuccess, isError } = useGetProducts(filter);
 
   useEffect(() => {
     if (isSuccess) {
-      const products: Product[] = Array.from(data.data.data.products);
-      setproducts(products);
+      setproducts(Array.from(data.data.data.products));
     }
   }, [isSuccess, data]);
 
-  // Sync search changes to filter (resets to page 0)
   useEffect(() => {
-    setFilter(prev => ({ ...prev, search, pageIndex: 0 }));
+    setFilter((prev) => ({ ...prev, search, pageIndex: 0 }));
   }, [search]);
 
-  // Fix 2: Sync hierarchy selections to the products table filter
   useEffect(() => {
-    setFilter(prev => ({
+    setFilter((prev) => ({
       ...prev,
       pageIndex: 0,
       subcategoryId: selectedSubcategoryId || undefined,
@@ -143,19 +263,17 @@ const ProductList = () => {
     }));
   }, [selectedSubcategoryId, selectedCategoryId]);
 
-  // Fix 3: handleMaterialChange — reset ALL child selections
   const handleMaterialChange = (id: string) => {
     setSelectedMaterialId(id);
-    setSelectedGenderId("");      // Fix 3
-    setSelectedItemId("");        // Fix 3
+    setSelectedGenderId("");
+    setSelectedItemId("");
     setSelectedCategoryId("");
     setSelectedSubcategoryId("");
   };
 
-  // Fix 4: handleGenderChange — reset item and below
   const handleGenderChange = (id: string) => {
     setSelectedGenderId(id);
-    setSelectedItemId("");        // Fix 4
+    setSelectedItemId("");
     setSelectedCategoryId("");
     setSelectedSubcategoryId("");
   };
@@ -181,42 +299,72 @@ const ProductList = () => {
 
   const hasAnyFilter = selectedMaterialId || selectedGenderId || selectedItemId || selectedCategoryId;
 
-  // Build breadcrumb trail
   const breadcrumb = useMemo(() => {
     const parts: string[] = [];
     if (selectedMaterialId) {
       const m = materials.find((x: any) => x._id === selectedMaterialId);
-      if (m) parts.push(m.displayName || m.name);
+      if (m) parts.push((m as any).displayName || (m as any).name);
     }
     if (selectedGenderId) {
       const g = genders.find((x: any) => x._id === selectedGenderId);
-      if (g) parts.push(g.name);
+      if (g) parts.push((g as any).name);
     }
     if (selectedItemId) {
       const i = items.find((x: any) => x._id === selectedItemId);
-      if (i) parts.push(i.name);
+      if (i) parts.push((i as any).name);
     }
     if (selectedCategoryId) {
       const c = categories.find((x: any) => x._id === selectedCategoryId);
-      if (c) parts.push(c.name);
+      if (c) parts.push((c as any).name);
     }
     if (selectedSubcategoryId) {
       const s = subcategories.find((x: any) => x._id === selectedSubcategoryId);
-      if (s) parts.push(s.name);
+      if (s) parts.push((s as any).name);
     }
     return parts;
   }, [selectedMaterialId, selectedGenderId, selectedItemId, selectedCategoryId, selectedSubcategoryId, materials, genders, items, categories, subcategories]);
 
-  // Compute totals from distribution data
   const totals = useMemo(() => {
-    const dist = categoryDist || [];
-    return dist.reduce((acc: any, c: any) => ({
-      total: acc.total + (c.total || 0),
-      active: acc.active + (c.active || 0),
-      inactive: acc.inactive + (c.inactive || 0),
-      outOfStock: acc.outOfStock + (c.outOfStock || 0),
-    }), { total: 0, active: 0, inactive: 0, outOfStock: 0 });
+    return (categoryDist || []).reduce(
+      (acc: any, c: any) => ({
+        total: acc.total + (c.total || 0),
+        active: acc.active + (c.active || 0),
+        inactive: acc.inactive + (c.inactive || 0),
+        outOfStock: acc.outOfStock + (c.outOfStock || 0),
+      }),
+      { total: 0, active: 0, inactive: 0, outOfStock: 0 }
+    );
   }, [categoryDist]);
+
+  // ---------------------------------------------------------------------------
+  // Inline table with expandable rows
+  // ---------------------------------------------------------------------------
+
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: filter.pageIndex,
+    pageSize: 10,
+  });
+
+  // Keep pagination in sync when filter changes externally (e.g. search reset)
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageIndex: filter.pageIndex }));
+  }, [filter.pageIndex]);
+
+  const table = useReactTable({
+    data: products,
+    columns: ProductColumns,
+    manualPagination: true,
+    state: { pagination },
+    pageCount: data?.data?.data?.totalPage ?? 1,
+    onPaginationChange: (updater) => {
+      const next = typeof updater === "function" ? updater(pagination) : updater;
+      setPagination(next);
+      setFilter((prev) => ({ ...prev, pageIndex: next.pageIndex }));
+    },
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  const colCount = ProductColumns.length;
 
   return (
     <section className="">
@@ -251,7 +399,6 @@ const ProductList = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            {/* Material (Level 1) */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Material</label>
               <select
@@ -265,8 +412,6 @@ const ProductList = () => {
                 ))}
               </select>
             </div>
-
-            {/* Gender (Level 2) */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Gender</label>
               <select
@@ -280,8 +425,6 @@ const ProductList = () => {
                 ))}
               </select>
             </div>
-
-            {/* Item (Level 3) */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Item Type</label>
               <select
@@ -295,8 +438,6 @@ const ProductList = () => {
                 ))}
               </select>
             </div>
-
-            {/* Category (Level 4) — depends on Material + Gender + Item */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Category</label>
               <select
@@ -311,8 +452,6 @@ const ProductList = () => {
                 ))}
               </select>
             </div>
-
-            {/* Subcategory (Level 5) — depends on Category */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Subcategory</label>
               <select
@@ -341,7 +480,6 @@ const ProductList = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Summary badges */}
             <div className="grid grid-cols-4 gap-3 mb-4">
               <div className="border rounded-lg p-3 text-center">
                 <div className="text-2xl font-bold">{formatNumber(totals.total)}</div>
@@ -360,8 +498,6 @@ const ProductList = () => {
                 <Badge className="mt-1 bg-red-100 text-red-800 hover:bg-red-100">Out of Stock</Badge>
               </div>
             </div>
-
-            {/* Breakdown table */}
             {(categoryDist || []).length > 0 ? (
               <Table>
                 <TableHeader>
@@ -391,7 +527,6 @@ const ProductList = () => {
           </CardContent>
         </Card>
 
-        {/* Stock Turnover */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -419,7 +554,9 @@ const ProductList = () => {
                   </TableRow>
                 ))}
                 {(!stockTurnover || stockTurnover.length === 0) && (
-                  <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No data</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground">No data</TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>
@@ -427,6 +564,7 @@ const ProductList = () => {
         </Card>
       </div>
 
+      {/* Products table with inline variant expansion */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-3">
@@ -449,7 +587,6 @@ const ProductList = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {/* Fix 6: show error state */}
           {isError && (
             <p className="py-8 text-center text-sm text-destructive">
               Failed to load products. Please refresh the page.
@@ -457,13 +594,114 @@ const ProductList = () => {
           )}
           {isLoading && <LoadingScreen />}
           {isSuccess && (
-            <DataTable
-              columns={ProductColumns}
-              data={products}
-              page={filter.pageIndex}
-              totalPage={data.data?.data?.totalPage}
-              changePage={changePage}
-            />
+            <div className="rounded-md">
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id} className="border-b border-border/60 hover:bg-transparent">
+                      {headerGroup.headers.map((header) => (
+                        <TableHead
+                          key={header.id}
+                          className="h-9 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap bg-muted/30"
+                        >
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.length ? (
+                    table.getRowModel().rows.map((row) => {
+                      const productId = (row.original as Product)._id ?? "";
+                      const isExpanded = expandedProductId === productId;
+
+                      return (
+                        <>
+                          <TableRow
+                            key={row.id}
+                            className="border-b border-border/40 hover:bg-muted/30 transition-colors"
+                            data-state={row.getIsSelected() ? "selected" : undefined}
+                          >
+                            {row.getVisibleCells().map((cell) => {
+                              const isNameCell = cell.column.id === "productTitle";
+                              return (
+                                <TableCell
+                                  key={cell.id}
+                                  className={`px-4 py-3 ${isNameCell ? "cursor-pointer select-none" : ""}`}
+                                  onClick={
+                                    isNameCell
+                                      ? () => setExpandedProductId(isExpanded ? null : productId)
+                                      : undefined
+                                  }
+                                >
+                                  <ErrorBoundary>
+                                    {isNameCell ? (
+                                      <div className="flex items-center gap-2">
+                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                        {isExpanded
+                                          ? <ChevronUp size={14} className="text-violet-500 shrink-0" />
+                                          : <ChevronDown size={14} className="text-muted-foreground/50 shrink-0" />
+                                        }
+                                      </div>
+                                    ) : (
+                                      flexRender(cell.column.columnDef.cell, cell.getContext())
+                                    )}
+                                  </ErrorBoundary>
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+
+                          {isExpanded && (
+                            <ProductVariantsRow
+                              key={`variants-${productId}`}
+                              productId={productId}
+                              colSpan={colCount}
+                            />
+                          )}
+                        </>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={colCount} className="h-32 text-center text-muted-foreground">
+                        No results found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between border-t border-border/40 px-4 py-3">
+                <p className="text-sm text-muted-foreground tabular-nums">
+                  Page {pagination.pageIndex + 1} of {data?.data?.data?.totalPage || 1}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1"
+                    disabled={!table.getCanPreviousPage()}
+                    onClick={table.previousPage}
+                  >
+                    <ChevronRight size={14} className="rotate-180" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1"
+                    disabled={!table.getCanNextPage()}
+                    onClick={table.nextPage}
+                  >
+                    Next
+                    <ChevronRight size={14} />
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

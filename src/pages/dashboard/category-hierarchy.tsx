@@ -481,7 +481,6 @@ const CategoryHierarchyPage = () => {
             <TableHead>Name</TableHead>
             <TableHead>ID</TableHead>
             <TableHead>Details</TableHead>
-            <TableHead>Status</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -518,11 +517,6 @@ const CategoryHierarchyPage = () => {
                   {details || item.description || '-'}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={item.isActive ? "default" : "secondary"}>
-                    {item.isActive ? "Active" : "Inactive"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
                   <Button variant="ghost" size="sm" onClick={() => handleEdit(item, item.level.toLowerCase() + 's')}>
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -532,7 +526,7 @@ const CategoryHierarchyPage = () => {
           })}
           {allItems.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground">
+              <TableCell colSpan={5} className="text-center text-muted-foreground">
                 No hierarchy items found
               </TableCell>
             </TableRow>

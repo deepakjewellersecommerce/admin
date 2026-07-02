@@ -93,6 +93,7 @@ const SubcategoryListPage = () => {
   const [showPricingDialog, setShowPricingDialog] = useState(false);
   const [selectedSubcategory, setSelectedSubcategory] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [pricingFilter, setPricingFilter] = useState<'all' | 'configured' | 'not-configured'>('all');
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showImpactModal, setShowImpactModal] = useState(false);
   const [editSubcategory, setEditSubcategory] = useState<any>(null);
@@ -127,6 +128,7 @@ const SubcategoryListPage = () => {
   const { data: subcategoriesData, isLoading: subcategoriesLoading } = useGetAllSubcategories({
     categoryId: categoryId,
     parentSubcategoryId: subId || null,
+    hasPricingConfig: pricingFilter === 'configured' ? true : pricingFilter === 'not-configured' ? false : undefined,
   });
 
   // Extract data early to avoid TDZ issues with hooks
@@ -189,9 +191,9 @@ const SubcategoryListPage = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteItem, setDeleteItem] = useState<any>(null);
 
-  const handleConfirmDelete = (force = false) => {
+  const handleConfirmDelete = () => {
     if (!deleteItem) return;
-    deleteSubcategory({ id: deleteItem._id, force }, {
+    deleteSubcategory({ id: deleteItem._id }, {
       onSuccess: () => {
         setShowDeleteDialog(false);
         setDeleteItem(null);
@@ -574,15 +576,30 @@ const SubcategoryListPage = () => {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <Input
-          placeholder="Search subcategories..."
-          className="pl-9"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+      {/* Search and Filters */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search subcategories..."
+            className="pl-9"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Pricing Config:</label>
+          <Select value={pricingFilter} onValueChange={(v) => setPricingFilter(v as 'all' | 'configured' | 'not-configured')}>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="configured">Configured</SelectItem>
+              <SelectItem value="not-configured">Not Configured</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Subcategory List */}
@@ -715,7 +732,7 @@ const SubcategoryListPage = () => {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Warning</AlertTitle>
             <AlertDescription>
-              This action cannot be undone. If this subcategory has nested subcategories or products, deletion will be blocked (or use Force Delete to remove descendants).
+              This action cannot be undone. Please delete all products and nested subcategories first before deleting this item.
             </AlertDescription>
           </Alert>
           <DialogFooter>
@@ -724,17 +741,10 @@ const SubcategoryListPage = () => {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => handleConfirmDelete(false)}
+              onClick={() => handleConfirmDelete()}
               disabled={isDeleting}
             >
               {isDeleting ? "Deleting..." : "Delete"}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => handleConfirmDelete(true)}
-              disabled={isDeleting}
-            >
-              {isDeleting ? "Deleting..." : "Force Delete All"}
             </Button>
           </DialogFooter>
         </DialogContent>

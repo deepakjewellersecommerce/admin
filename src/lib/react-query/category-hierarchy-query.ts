@@ -577,3 +577,12 @@ export const useGetSubcategoryAffectedProducts = (
     staleTime: 5 * 60 * 1000,
   });
 };
+
+export const useSuggestSubcategoryIdAttribute = (name: string, parentCategoryId?: string) => {
+  return useQuery({
+    queryKey: ['subcategory', 'suggest-id', name, parentCategoryId],
+    queryFn: () => categoryHierarchyAPI.suggestSubcategoryIdAttribute(name, parentCategoryId),
+    enabled: name.trim().length >= 2,
+    staleTime: 0,
+  });
+};
